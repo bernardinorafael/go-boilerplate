@@ -7,14 +7,6 @@ import (
 	"time"
 )
 
-type Prefix string
-
-const (
-	RolePrefix    Prefix = "role"
-	UserPrefix    Prefix = "user"
-	AccountPrefix Prefix = "acc"
-)
-
 const epochTimestampInSeconds = 1700000000
 
 // New generates a unique identifier with an optional prefix.

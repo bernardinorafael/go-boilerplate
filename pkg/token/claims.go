@@ -8,20 +8,18 @@ import (
 )
 
 type Claims struct {
-	// TODO: Fill with system claims
+	UserID string `json:"user_id"`
 	jwt.RegisteredClaims
 }
 
-func NewClaims(accId, userId, username string, duration time.Duration) (*Claims, error) {
-	// claims := &Claims{
-	// 	RegisteredClaims: jwt.RegisteredClaims{
-	// 		Subject:   username,
-	// 		IssuedAt:  jwt.NewNumericDate(time.Now()),
-	// 		ExpiresAt: jwt.NewNumericDate(time.Now().Add(duration)),
-	// 	},
-	// }
-	// return claims, nil
-	return &Claims{}, nil
+func NewClaims(userId string, duration time.Duration) (*Claims, error) {
+	return &Claims{
+		UserID: userId,
+		RegisteredClaims: jwt.RegisteredClaims{
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(duration)),
+		},
+	}, nil
 }
 
 func (a *Claims) Valid() error {

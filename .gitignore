@@ -27,5 +27,8 @@ http-client.env.json
 *.http
 .vscode
 
+#temp
+__temp/
+
 #aws
 .aws/credentials

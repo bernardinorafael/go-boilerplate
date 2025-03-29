@@ -9,15 +9,15 @@ import (
 	"github.com/golang-jwt/jwt"
 )
 
-func Gen(secretKey, accId, userId, username string, duration time.Duration) (string,
+func Gen(secretKey, userId string, duration time.Duration) (string,
 	*Claims, error) {
 	if len(secretKey) != chacha20poly1305.KeySize {
 		return "", nil, fmt.Errorf("invalid secret key")
 	}
 
-	claims, err := NewClaims(accId, userId, username, duration)
+	claims, err := NewClaims(userId, duration)
 	if err != nil {
-		return "", nil, fmt.Errorf("failed to create account claims: %w", err)
+		return "", nil, fmt.Errorf("failed to create session claims: %w", err)
 	}
 
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

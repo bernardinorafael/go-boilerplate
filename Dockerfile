@@ -1,4 +1,4 @@
-FROM golang:1.24-alpine AS builder
+FROM golang:1.24 AS builder
 
 # Add Maintainer info
 LABEL maintainer="Rafael Bernardino <rafaelferreirab2@gmail.com>"
