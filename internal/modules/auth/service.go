@@ -7,7 +7,7 @@ import (
 
 	"github.com/bernardinorafael/go-boilerplate/internal/common/dto"
 	"github.com/bernardinorafael/go-boilerplate/internal/infra/database/model"
-	"github.com/bernardinorafael/go-boilerplate/internal/infra/mailer"
+	"github.com/bernardinorafael/go-boilerplate/internal/infra/mail"
 	"github.com/bernardinorafael/go-boilerplate/internal/modules/session"
 	"github.com/bernardinorafael/go-boilerplate/internal/modules/user"
 	"github.com/bernardinorafael/go-boilerplate/pkg/crypto"
@@ -26,7 +26,7 @@ type service struct {
 	log            logging.Logger
 	userService    user.Service
 	sessionService session.Service
-	mailer         *mailer.Mailer
+	mailService    *mail.Mail
 	secretKey      string
 }
 
@@ -34,14 +34,14 @@ func NewService(
 	log logging.Logger,
 	userService user.Service,
 	sessionService session.Service,
-	mailer *mailer.Mailer,
+	mailService *mail.Mail,
 	secretKey string,
 ) Service {
 	return &service{
 		log:            log,
 		userService:    userService,
 		sessionService: sessionService,
-		mailer:         mailer,
+		mailService:    mailService,
 		secretKey:      secretKey,
 	}
 }
@@ -64,7 +64,7 @@ func (s service) Register(ctx context.Context, input dto.CreateUser) error {
 
 	// TODO: Send to a queue
 	// go func() {
-	// 	params := mailer.SendParams{
+	// 	params := mail.SendParams{
 	// 		From:    <your-notification-sender>,
 	// 		To:      input.Email,
 	// 		Subject: "Activate your account",
@@ -74,7 +74,7 @@ func (s service) Register(ctx context.Context, input dto.CreateUser) error {
 	// 			"Name":           input.Name,
 	// 		},
 	// 	}
-	// 	err := s.mailer.Send(params)
+	// 	err := s.mailService.Send(params)
 	// 	if err != nil {
 	// 		s.log.Errorw(ctx, "failed to send email", logging.Err(err))
 	// 	}

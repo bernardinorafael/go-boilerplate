@@ -1,4 +1,4 @@
-package mailer
+package mail
 
 import (
 	"bytes"
@@ -33,15 +33,15 @@ type Config struct {
 	Timeout    time.Duration
 }
 
-type Mailer struct {
+type Mail struct {
 	ctx    context.Context
 	log    logging.Logger
 	client *resend.Client
 	config Config
 }
 
-func New(ctx context.Context, log logging.Logger, config Config) *Mailer {
-	return &Mailer{
+func New(ctx context.Context, log logging.Logger, config Config) *Mail {
+	return &Mail{
 		ctx:    ctx,
 		log:    log,
 		client: resend.NewClient(config.APIKey),
@@ -49,7 +49,7 @@ func New(ctx context.Context, log logging.Logger, config Config) *Mailer {
 	}
 }
 
-func (m *Mailer) Send(p SendParams) error {
+func (m *Mail) Send(p SendParams) error {
 	tmplLocation := fmt.Sprintf("templates/%s", p.File)
 
 	tmpl, err := template.New("email").ParseFS(templateFS, tmplLocation)
@@ -84,7 +84,7 @@ func (m *Mailer) Send(p SendParams) error {
 	return m.send(params, m.config.MaxRetries)
 }
 
-func (m *Mailer) send(p *resend.SendEmailRequest, maxRetries int) error {
+func (m *Mail) send(p *resend.SendEmailRequest, maxRetries int) error {
 	var mailerErr error
 
 	for attempt := 1; attempt <= maxRetries; attempt++ {

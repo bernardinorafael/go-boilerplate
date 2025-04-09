@@ -1,4 +1,4 @@
-package mailer
+package mail
 
 // Put your senders here
 // Example:
