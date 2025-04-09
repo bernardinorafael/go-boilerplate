@@ -2,7 +2,8 @@ package session
 
 import (
 	"context"
-	"gulg/internal/infra/database/model"
+
+	"github.com/bernardinorafael/go-boilerplate/internal/infra/database/model"
 )
 
 type Repository interface {

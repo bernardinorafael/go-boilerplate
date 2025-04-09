@@ -11,7 +11,7 @@ func NewHandler() *handler {
 }
 
 func (h handler) Register(r *chi.Mux) {
-	r.Route("/v1/sessions", func(r chi.Router) {
-		// routes here
+	r.Route("/api/v1/sessions", func(r chi.Router) {
+		// handle here
 	})
 }

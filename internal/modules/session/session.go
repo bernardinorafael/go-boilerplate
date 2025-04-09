@@ -1,11 +1,12 @@
 package session
 
 import (
-	"errors"
-	"fmt"
-	"gulg/internal/infra/database/model"
-	"gulg/pkg/uid"
 	"time"
+
+	"github.com/bernardinorafael/go-boilerplate/internal/infra/database/model"
+
+	"github.com/bernardinorafael/go-boilerplate/pkg/fault"
+	"github.com/bernardinorafael/go-boilerplate/pkg/uid"
 )
 
 const (
@@ -39,7 +40,11 @@ func New(userId, ip, agent, refresh string) (*session, error) {
 	}
 
 	if err := s.validate(); err != nil {
-		return nil, fmt.Errorf("failed to create session entity: %w", err)
+		return nil, fault.New(
+			"failed to create session entity",
+			fault.WithTag(fault.INVALID_ENTITY),
+			fault.WithError(err),
+		)
 	}
 
 	return &s, nil
@@ -61,16 +66,16 @@ func (s *session) NewFromModel(m model.Session) *session {
 
 func (s *session) validate() error {
 	if s.userId == "" {
-		return errors.New("user id is required")
+		return fault.New("user id is required")
 	}
 	if s.ip == "" {
-		return errors.New("ip is required")
+		return fault.New("ip is required")
 	}
 	if s.agent == "" {
-		return errors.New("agent is required")
+		return fault.New("agent is required")
 	}
 	if s.refreshToken == "" {
-		return errors.New("refresh token is required")
+		return fault.New("refresh token is required")
 	}
 
 	return nil

@@ -9,8 +9,7 @@ import (
 	"github.com/golang-jwt/jwt"
 )
 
-func Gen(secretKey, userId string, duration time.Duration) (string,
-	*Claims, error) {
+func Gen(secretKey, userId string, duration time.Duration) (string, *Claims, error) {
 	if len(secretKey) != chacha20poly1305.KeySize {
 		return "", nil, fmt.Errorf("invalid secret key")
 	}

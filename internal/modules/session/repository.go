@@ -5,8 +5,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"gulg/internal/infra/database/model"
 	"time"
+
+	"github.com/bernardinorafael/go-boilerplate/internal/infra/database/model"
 
 	"github.com/jmoiron/sqlx"
 )

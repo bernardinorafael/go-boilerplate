@@ -2,14 +2,14 @@ include .env
 default: run
 # Sets variable for common migration Docker command
 MIGRATE_CMD = docker run -it --rm --network host --volume $(PWD)/internal/infra/database:/db migrate/migrate
-APP_NAME=gulg-server
+APP_NAME=bankey-server
 VERSION=1.0.0
 DOCKER_IMAGE=$(APP_NAME):$(VERSION)
 
-imgbuild: # Build the Docker image
+docker-build: # Build the Docker image
 	@echo "=====> Building Docker image"
 	@docker build --no-cache -t $(DOCKER_IMAGE) .
-.PHONY: imgbuild
+.PHONY: docker-build
 
 air: # Access the Air container
 	@docker compose logs -f air
@@ -31,13 +31,12 @@ migrate: # Add a new migration
 	@$(MIGRATE_CMD) create -ext sql -dir /db/migrations $(name)
 .PHONY: migrate
 
-
-migup: # Apply all pending migrations
+migrate-up: # Apply all pending migrations
 	@echo "=====> Applying all pending migrations"
 	@$(MIGRATE_CMD) -path=/db/migrations -database "$(DB_URL)" up
-.PHONY: migup
+.PHONY: migrate-up
 
-migdown: # Revert all applied migrations
+migrate-down: # Revert all applied migrations
 	@echo "=====> Reverting all applied migrations"
 	@$(MIGRATE_CMD) -path=/db/migrations -database "$(DB_URL)" down
-.PHONY: migdown
+.PHONY: migrate-down

@@ -1,8 +1,8 @@
-package entity
+package user
 
 import "time"
 
-type User struct {
+type Entity struct {
 	ID        string    `json:"id"`
 	Name      string    `json:"name"`
 	Username  string    `json:"username"`

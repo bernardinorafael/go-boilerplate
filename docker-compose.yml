@@ -1,41 +1,42 @@
 services:
-    db:
-        container_name: gulg-postgres
-        image: bitnami/postgresql:latest
-        environment:
-            POSTGRESQL_DATABASE: ${DB_NAME}
-            POSTGRESQL_PASSWORD: ${DB_PASSWORD}
-            POSTGRESQL_USERNAME: ${DB_USER}
-            POSTGRES_HOST: ${DB_HOST}
-        ports:
-            - 5432:5432
-        volumes:
-            - gulg_data:/bitnami/postgresql
-        networks:
-            - gulg_network
+  db:
+    container_name: ${APP_NAME}-postgres
+    image: bitnami/postgresql:latest
+    env_file: ".env"
+    environment:
+      POSTGRESQL_DATABASE: ${DB_NAME}
+      POSTGRESQL_PASSWORD: ${DB_PASSWORD}
+      POSTGRESQL_USERNAME: ${DB_USER}
+      POSTGRES_HOST: ${DB_HOST}
+    ports:
+      - 5432:5432
+    volumes:
+      - go-boilerplate-data:/bitnami/postgresql
+    networks:
+      - go-boilerplate-network
 
-    air:
-        container_name: gulg-server-hot-reload
-        image: cosmtrek/air:latest
-        working_dir: /app
-        ports:
-            - 8080:8080
-        environment:
-            DB_HOST: db
-            DB_USER: ${DB_USER}
-            DB_PASSWORD: ${DB_PASSWORD}
-            DB_NAME: ${DB_NAME}
-            GOTOOLCHAIN: auto
-        volumes:
-            - .:/app
-        networks:
-            - gulg_network
-        depends_on:
-            - db
+  air:
+    container_name: ${APP_NAME}-air
+    image: cosmtrek/air:latest
+    working_dir: /app
+    ports:
+      - 8080:8080
+    environment:
+      DB_HOST: db
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      GOTOOLCHAIN: auto
+    volumes:
+      - .:/app
+    networks:
+      - go-boilerplate-network
+    depends_on:
+      - db
 
 volumes:
-    gulg_data:
+  go-boilerplate-data:
 
 networks:
-    gulg_network:
-        driver: bridge
+  go-boilerplate-network:
+    driver: bridge

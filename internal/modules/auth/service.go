@@ -2,15 +2,18 @@ package auth
 
 import (
 	"context"
-	"gulg/internal/_shared/dto"
-	"gulg/internal/modules/session"
-	"gulg/internal/modules/user"
-	"gulg/pkg/crypto"
-	"gulg/pkg/fault"
-	"gulg/pkg/logging"
-	"gulg/pkg/token"
 	"net/http"
 	"time"
+
+	"github.com/bernardinorafael/go-boilerplate/internal/common/dto"
+	"github.com/bernardinorafael/go-boilerplate/internal/infra/database/model"
+	"github.com/bernardinorafael/go-boilerplate/internal/modules/session"
+	"github.com/bernardinorafael/go-boilerplate/internal/modules/user"
+	"github.com/bernardinorafael/go-boilerplate/pkg/crypto"
+	"github.com/bernardinorafael/go-boilerplate/pkg/logging"
+	"github.com/bernardinorafael/go-boilerplate/pkg/token"
+
+	"github.com/bernardinorafael/go-boilerplate/pkg/fault"
 )
 
 const (
@@ -39,6 +42,15 @@ func NewService(
 	}
 }
 
+func (s service) GetSigned(ctx context.Context, userId string) (*model.User, error) {
+	userRecord, err := s.userService.GetUserByID(ctx, userId)
+	if err != nil {
+		return nil, err // The error is already being handled in the user service
+	}
+
+	return userRecord, nil
+}
+
 func (s service) Register(ctx context.Context, input dto.CreateUser) error {
 	err := s.userService.CreateUser(ctx, input)
 	if err != nil {
@@ -58,24 +70,22 @@ func (s service) Login(ctx context.Context, email, password, ip, agent string) (
 	}
 
 	if !crypto.PasswordMatches(password, user.Password) {
-		return nil, fault.NewUnauthorized("invalid credentials", nil)
+		return nil, fault.NewUnauthorized("invalid credentials")
 	}
 
 	if user.Locked {
 		return nil, fault.New(
-			http.StatusUnauthorized,
-			fault.LOCKED_USER,
-			"this user is unavailable to login",
-			nil,
+			"user is locked",
+			fault.WithHTTPCode(http.StatusUnauthorized),
+			fault.WithTag(fault.LOCKED_USER),
 		)
 	}
 
 	if !user.Enabled {
 		return nil, fault.New(
-			http.StatusUnauthorized,
-			fault.DISABLED_USER,
-			"this user is unavailable to login",
-			nil,
+			"user must enable account to login",
+			fault.WithHTTPCode(http.StatusUnauthorized),
+			fault.WithTag(fault.DISABLED_USER),
 		)
 	}
 
@@ -83,13 +93,13 @@ func (s service) Login(ctx context.Context, email, password, ip, agent string) (
 	accessToken, _, err := token.Gen(s.secretKey, user.ID, accessTokenDuration)
 	if err != nil {
 		s.log.Errorw(ctx, "failed to generate access token", logging.Err(err))
-		return nil, fault.NewUnauthorized(err.Error(), err)
+		return nil, fault.NewUnauthorized(err.Error())
 	}
 	// Refresh token with 30 days expiration
 	refreshToken, _, err := token.Gen(s.secretKey, user.ID, refreshTokenDuration)
 	if err != nil {
 		s.log.Errorw(ctx, "failed to generate refresh token", logging.Err(err))
-		return nil, fault.NewUnauthorized(err.Error(), err)
+		return nil, fault.NewUnauthorized(err.Error())
 	}
 
 	sessionId, err := s.sessionService.CreateSession(ctx, user.ID, ip, agent, refreshToken)

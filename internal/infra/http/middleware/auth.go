@@ -2,10 +2,11 @@ package middleware
 
 import (
 	"context"
-	"gulg/pkg/fault"
-	"gulg/pkg/token"
 	"net/http"
 	"strings"
+
+	"github.com/bernardinorafael/go-boilerplate/pkg/fault"
+	"github.com/bernardinorafael/go-boilerplate/pkg/token"
 )
 
 type AuthKey struct{}
@@ -25,17 +26,17 @@ func (m *middleware) WithAuth(next http.Handler) http.Handler {
 		accessToken := r.Header.Get("Authorization")
 
 		if len(accessToken) == 0 {
-			fault.NewHTTPResponse(w, fault.NewUnauthorized("access token not provided", nil))
+			fault.NewHTTPError(w, fault.NewUnauthorized("access token not provided"))
 			return
 		}
 
 		claims, err := token.Verify(m.secretKey, accessToken)
 		if err != nil {
 			if strings.Contains(err.Error(), "token has expired") {
-				fault.NewHTTPResponse(w, fault.NewUnauthorized("token has expired", err))
+				fault.NewHTTPError(w, fault.NewUnauthorized("token has expired"))
 				return
 			}
-			fault.NewHTTPResponse(w, fault.NewUnauthorized("invalid access token", err))
+			fault.NewHTTPError(w, fault.NewUnauthorized("invalid access token"))
 			return
 		}
 

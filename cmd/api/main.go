@@ -2,15 +2,16 @@ package main
 
 import (
 	"context"
-	"gulg/internal/infra/database/pg"
-	"gulg/internal/infra/http/middleware"
-	"gulg/internal/modules/auth"
-	"gulg/internal/modules/session"
-	"gulg/internal/modules/user"
-	"gulg/pkg/config"
-	"gulg/pkg/logging"
 	"net/http"
 	"os"
+
+	"github.com/bernardinorafael/go-boilerplate/internal/infra/database/pg"
+	"github.com/bernardinorafael/go-boilerplate/internal/infra/http/middleware"
+	"github.com/bernardinorafael/go-boilerplate/internal/modules/auth"
+	"github.com/bernardinorafael/go-boilerplate/internal/modules/session"
+	"github.com/bernardinorafael/go-boilerplate/internal/modules/user"
+	"github.com/bernardinorafael/go-boilerplate/pkg/config"
+	"github.com/bernardinorafael/go-boilerplate/pkg/logging"
 
 	"github.com/go-chi/chi"
 	chimiddleware "github.com/go-chi/chi/middleware"
@@ -48,7 +49,7 @@ func main() {
 
 	// User
 	userRepo := user.NewRepo(con.DB())
-	userService := user.NewService(userRepo)
+	userService := user.NewService(log, userRepo)
 
 	// Session
 	sessionRepo := session.NewRepo(con.DB())
@@ -56,7 +57,7 @@ func main() {
 
 	// Auth
 	authService := auth.NewService(log, userService, sessionService, cfg.JWTSecretKey)
-	auth.NewHandler(authService).Register(r)
+	auth.NewHandler(authService, cfg.JWTSecretKey).Register(r)
 
 	log.Info(ctx, "Server running")
 	err = http.ListenAndServe(":"+cfg.Port, r)

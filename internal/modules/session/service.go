@@ -3,10 +3,11 @@ package session
 import (
 	"context"
 	"fmt"
-	"gulg/internal/modules/user"
-	"gulg/pkg/fault"
-	"gulg/pkg/logging"
 
+	"github.com/bernardinorafael/go-boilerplate/internal/modules/user"
+	"github.com/bernardinorafael/go-boilerplate/pkg/logging"
+
+	"github.com/bernardinorafael/gogem/pkg/fault"
 	"github.com/medama-io/go-useragent"
 )
 
@@ -39,14 +40,14 @@ func (s service) CreateSession(ctx context.Context, userId, ip, agent, refreshTo
 	sess, err := New(userRecord.ID, ip, userAgent, refreshToken)
 	if err != nil {
 		s.log.Errorw(ctx, "failed to create session entity", logging.Err(err))
-		return "", fault.NewUnprocessableEntity("failed to create session entity", err)
+		return "", fault.NewUnprocessableEntity("failed to create session entity")
 	}
 	model := sess.ToModel()
 
 	err = s.sessionRepo.Insert(ctx, model)
 	if err != nil {
 		s.log.Errorw(ctx, "failed to insert session entity", logging.Err(err))
-		return "", fault.NewBadRequest("failed to insert session entity", err)
+		return "", fault.NewBadRequest("failed to insert session entity")
 	}
 
 	return sess.ID(), nil

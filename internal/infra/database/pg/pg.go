@@ -7,7 +7,9 @@ import (
 	_ "github.com/lib/pq"
 )
 
-type Database struct{ db *sqlx.DB }
+type Database struct {
+	db *sqlx.DB
+}
 
 func NewConnection(dsn string) (*Database, error) {
 	db, err := sqlx.Connect("postgres", dsn)

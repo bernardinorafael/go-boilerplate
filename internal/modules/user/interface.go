@@ -2,8 +2,9 @@ package user
 
 import (
 	"context"
-	"gulg/internal/_shared/dto"
-	"gulg/internal/infra/database/model"
+
+	"github.com/bernardinorafael/go-boilerplate/internal/common/dto"
+	"github.com/bernardinorafael/go-boilerplate/internal/infra/database/model"
 )
 
 type Repository interface {

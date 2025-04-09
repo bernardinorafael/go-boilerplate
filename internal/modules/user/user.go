@@ -1,12 +1,12 @@
 package user
 
 import (
-	"errors"
-	"fmt"
-	"gulg/internal/infra/database/model"
-	"gulg/pkg/crypto"
-	"gulg/pkg/uid"
 	"time"
+
+	"github.com/bernardinorafael/go-boilerplate/internal/infra/database/model"
+	"github.com/bernardinorafael/go-boilerplate/pkg/crypto"
+	"github.com/bernardinorafael/go-boilerplate/pkg/fault"
+	"github.com/bernardinorafael/go-boilerplate/pkg/uid"
 )
 
 type user struct {
@@ -25,7 +25,7 @@ type user struct {
 func New(name, username, email, pass string) (*user, error) {
 	hashedPass, err := crypto.HashPassword(pass)
 	if err != nil {
-		return nil, fmt.Errorf("failed to hash password: %w", err)
+		return nil, fault.New("failed to hash password", fault.WithError(err))
 	}
 
 	u := user{
@@ -42,7 +42,11 @@ func New(name, username, email, pass string) (*user, error) {
 	}
 
 	if err := u.validate(); err != nil {
-		return nil, fmt.Errorf("failed to create user entity: %w", err)
+		return nil, fault.New(
+			"failed to create user entity",
+			fault.WithTag(fault.INVALID_ENTITY),
+			fault.WithError(err),
+		)
 	}
 
 	return &u, nil
@@ -65,16 +69,16 @@ func (u *user) ToModel() model.User {
 
 func (u *user) validate() error {
 	if u.name == "" {
-		return errors.New("user name is required")
+		return fault.New("user name is required")
 	}
 	if u.password == "" {
-		return errors.New("password is required")
+		return fault.New("password is required")
 	}
 	if u.email == "" {
-		return errors.New("email is required")
+		return fault.New("email is required")
 	}
 	if u.username == "" {
-		return errors.New("username is required")
+		return fault.New("username is required")
 	}
 
 	return nil
