@@ -7,6 +7,7 @@ import (
 
 	"github.com/bernardinorafael/go-boilerplate/internal/common/dto"
 	"github.com/bernardinorafael/go-boilerplate/internal/infra/database/model"
+	"github.com/bernardinorafael/go-boilerplate/internal/infra/mailer"
 	"github.com/bernardinorafael/go-boilerplate/internal/modules/session"
 	"github.com/bernardinorafael/go-boilerplate/internal/modules/user"
 	"github.com/bernardinorafael/go-boilerplate/pkg/crypto"
@@ -25,6 +26,7 @@ type service struct {
 	log            logging.Logger
 	userService    user.Service
 	sessionService session.Service
+	mailer         *mailer.Mailer
 	secretKey      string
 }
 
@@ -32,12 +34,14 @@ func NewService(
 	log logging.Logger,
 	userService user.Service,
 	sessionService session.Service,
+	mailer *mailer.Mailer,
 	secretKey string,
 ) Service {
 	return &service{
 		log:            log,
 		userService:    userService,
 		sessionService: sessionService,
+		mailer:         mailer,
 		secretKey:      secretKey,
 	}
 }
@@ -57,6 +61,24 @@ func (s service) Register(ctx context.Context, input dto.CreateUser) error {
 		s.log.Errorw(ctx, "failed to create user", logging.Err(err))
 		return err // The error is already being handled in the user service
 	}
+
+	// TODO: Send to a queue
+	// go func() {
+	// 	params := mailer.SendParams{
+	// 		From:    <your-notification-sender>,
+	// 		To:      input.Email,
+	// 		Subject: "Activate your account",
+	// 		File:    "activate_user.html",
+	// 		Data: map[string]any{
+	// 			"ActivationLink": <your-activation-link>,
+	// 			"Name":           input.Name,
+	// 		},
+	// 	}
+	// 	err := s.mailer.Send(params)
+	// 	if err != nil {
+	// 		s.log.Errorw(ctx, "failed to send email", logging.Err(err))
+	// 	}
+	// }()
 
 	s.log.Infow(ctx, "user created", logging.String("user_email", input.Email))
 	return nil

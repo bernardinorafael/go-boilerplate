@@ -1,0 +1,90 @@
+{{ define "email" }}
+<!DOCTYPE html>
+<html dir="ltr" lang="en">
+
+<head>
+	<meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
+	<meta name="x-apple-disable-message-reformatting" />
+	<link rel="preload" as="image" href="https://react-email-demo-i1as60qib-resend.vercel.app/static/dropbox-logo.png" />
+	<style>
+		body {
+			background-color: #f6f9fc;
+			padding: 10px 0;
+
+		}
+
+		title {
+			font-size: 16px;
+			color: #09090B;
+
+		}
+
+		.email-container {
+			max-width: 37.5em;
+			background-color: #ffffff;
+			border: 1px solid #f0f0f0;
+			padding: 45px;
+		}
+
+		.email-content {
+			font-size: 14px;
+			color: #71717B;
+			margin-bottom: 12px;
+			margin-top: 12px;
+		}
+
+		.activate-button {
+			line-height: 100%;
+			text-decoration: none;
+			display: block;
+			max-width: 100%;
+			background-color: #007ee9;
+			border-radius: 8px;
+			color: #fff;
+			font-family: 'Open Sans', 'Helvetica Neue', Arial;
+			font-size: 16px;
+			text-align: center;
+			padding: 14px 4px;
+		}
+	</style>
+</head>
+
+<body>
+	<table align="center" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation"
+		class="email-container">
+		<tbody>
+			<tr style="width:100%">
+				<td>
+					<table align="center" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation">
+						<tbody>
+							<tr>
+								<td>
+									<p class="title">Hi {{ .Name }},</p>
+									<p class="email-content">
+										Thank you for creating an account. Please click the link below to activate your
+										account:
+									</p>
+									<a href="{{ .ActivationLink }}" class="activate-button" target="_blank">
+										<span>Activate Account</span>
+									</a>
+									<p class="email-content">
+										If you did not create this account, please ignore and delete this email.
+									</p>
+									<p class="email-content">
+										To keep your account secure, please do not forward this email to anyone.
+									</p>
+									<p class="email-content">
+										Thank you!
+									</p>
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</td>
+			</tr>
+		</tbody>
+	</table>
+</body>
+
+</html>
+{{ end }}

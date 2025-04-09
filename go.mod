@@ -11,6 +11,7 @@ require (
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/lib/pq v1.10.9
 	github.com/medama-io/go-useragent v1.1.0
+	github.com/resend/resend-go/v2 v2.17.0
 	github.com/spf13/viper v1.20.1
 	go.uber.org/zap v1.27.0
 	golang.org/x/crypto v0.37.0

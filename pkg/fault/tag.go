@@ -20,6 +20,7 @@ const (
 	DISABLED_USER         Tag = "DISABLED_USER"
 	DB_RESOURCE_NOT_FOUND Tag = "DB_RESOURCE_NOT_FOUND"
 	INVALID_ENTITY        Tag = "INVALID_ENTITY"
+	MAILER_ERROR          Tag = "MAILER_ERROR"
 )
 
 // GetTag returns the first tag of the error

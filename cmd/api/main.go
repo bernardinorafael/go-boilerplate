@@ -4,9 +4,11 @@ import (
 	"context"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/bernardinorafael/go-boilerplate/internal/infra/database/pg"
 	"github.com/bernardinorafael/go-boilerplate/internal/infra/http/middleware"
+	"github.com/bernardinorafael/go-boilerplate/internal/infra/mailer"
 	"github.com/bernardinorafael/go-boilerplate/internal/modules/auth"
 	"github.com/bernardinorafael/go-boilerplate/internal/modules/session"
 	"github.com/bernardinorafael/go-boilerplate/internal/modules/user"
@@ -47,6 +49,15 @@ func main() {
 	}
 	defer con.Close()
 
+	// Mailer
+	mailerParams := mailer.Config{
+		APIKey:     cfg.ResendKey,
+		MaxRetries: 3,
+		RetryDelay: time.Second * 2,
+		Timeout:    time.Second * 5,
+	}
+	mailerService := mailer.New(ctx, log, mailerParams)
+
 	// User
 	userRepo := user.NewRepo(con.DB())
 	userService := user.NewService(log, userRepo)
@@ -56,7 +67,7 @@ func main() {
 	sessionService := session.NewService(log, sessionRepo, userService, cfg.JWTSecretKey)
 
 	// Auth
-	authService := auth.NewService(log, userService, sessionService, cfg.JWTSecretKey)
+	authService := auth.NewService(log, userService, sessionService, mailerService, cfg.JWTSecretKey)
 	auth.NewHandler(authService, cfg.JWTSecretKey).Register(r)
 
 	log.Info(ctx, "Server running")
