@@ -9,21 +9,6 @@ import (
 
 const epochTimestampInSeconds = 1700000000
 
-// New generates a unique identifier with an optional prefix.
-// It creates a KSUID (K-Sortable Unique Identifier) and prepends the
-// specified prefix with an underscore separator if a prefix is provided.
-//
-// KSUIDs are 27-character, URL-safe, base62-encoded strings that contain:
-// - A timestamp with 1-second resolution (first 4 bytes)
-// - 16 bytes of random data
-//
-// This makes them:
-// - Time sortable (newer KSUIDs sort lexicographically after older ones)
-// - Highly unique (with ~2^128 possible random combinations)
-// - More compact than UUIDs
-//
-// Example:
-//
 //	// Generate an ID with a custom prefix
 //	id := uid.New("invoice") // returns "invoice_1z4UVH4CbRPvgSfCBmheK2h8xZb"
 //
