@@ -15,6 +15,7 @@ require (
 	github.com/spf13/viper v1.20.1
 	go.uber.org/zap v1.27.0
 	golang.org/x/crypto v0.37.0
+	golang.org/x/time v0.11.0
 )
 
 require github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect

@@ -34,6 +34,7 @@ func main() {
 	r := chi.NewRouter()
 	r.Use(chimiddleware.Logger)
 	r.Use(middleware.WithIP)
+	r.Use(middleware.WithRateLimit)
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"https://*", "http://*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
