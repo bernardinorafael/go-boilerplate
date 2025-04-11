@@ -50,7 +50,7 @@ func New(userId, ip, agent, refresh string) (*session, error) {
 	return &s, nil
 }
 
-func (s *session) NewFromModel(m model.Session) *session {
+func NewFromModel(m model.Session) *session {
 	return &session{
 		id:           m.ID,
 		userId:       m.UserID,
@@ -97,6 +97,11 @@ func (s *session) ToModel() model.Session {
 
 func (s *session) IsExpired() bool {
 	return s.expires.Before(time.Now())
+}
+
+func (s *session) ChangeRefreshToken(refreshToken string) {
+	s.refreshToken = refreshToken
+	s.updated = time.Now()
 }
 
 func (s *session) Activate() {

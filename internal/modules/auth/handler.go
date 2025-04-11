@@ -7,7 +7,6 @@ import (
 	"github.com/bernardinorafael/go-boilerplate/internal/common/dto"
 	"github.com/bernardinorafael/go-boilerplate/internal/infra/http/middleware"
 	"github.com/bernardinorafael/go-boilerplate/pkg/fault"
-	"github.com/bernardinorafael/go-boilerplate/pkg/token"
 
 	httputil "github.com/bernardinorafael/gogem/pkg/httputil"
 	"github.com/go-chi/chi"
@@ -37,21 +36,43 @@ func (h handler) Register(r *chi.Mux) {
 	m := middleware.NewWithAuth(h.secretKey)
 
 	r.Route("/api/v1/auth", func(r chi.Router) {
+		// Private
 		r.With(m.WithAuth).Get("/me", h.handleGetSigned)
+		r.With(m.WithAuth).Patch("/logout", h.handleLogout)
+		// Public
+		r.Get("/activate/{userId}", h.handleActivate)
 		r.Post("/register", h.handleRegister)
 		r.Post("/login", h.handleLogin)
 	})
 }
 
-func (h handler) handleGetSigned(w http.ResponseWriter, r *http.Request) {
+func (h handler) handleLogout(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	userId, ok := ctx.Value(middleware.AuthKey{}).(*token.Claims)
-	if !ok {
-		fault.NewHTTPError(w, fault.NewUnauthorized("access token not found"))
+	err := h.authService.Logout(ctx)
+	if err != nil {
+		fault.NewHTTPError(w, err)
 		return
 	}
 
-	user, err := h.authService.GetSigned(ctx, userId.ID)
+	httputil.WriteSuccess(w, http.StatusOK)
+}
+
+func (h handler) handleActivate(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	userId := chi.URLParam(r, "userId")
+
+	err := h.authService.Activate(ctx, userId)
+	if err != nil {
+		fault.NewHTTPError(w, err)
+		return
+	}
+
+	httputil.WriteSuccess(w, http.StatusOK)
+}
+
+func (h handler) handleGetSigned(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	user, err := h.authService.GetSignedUser(ctx)
 	if err != nil {
 		fault.NewHTTPError(w, err)
 		return
@@ -76,7 +97,7 @@ func (h handler) handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.WriteSuccess(w, http.StatusCreated)
+	httputil.WriteSuccess(w, http.StatusAccepted)
 }
 
 func (h handler) handleLogin(w http.ResponseWriter, r *http.Request) {

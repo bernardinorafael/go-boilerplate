@@ -22,6 +22,21 @@ type user struct {
 	updated    time.Time
 }
 
+func NewFromModel(m model.User) *user {
+	return &user{
+		id:         m.ID,
+		name:       m.Name,
+		username:   m.Username,
+		email:      m.Email,
+		password:   m.Password,
+		avatar_url: m.AvatarURL,
+		enabled:    m.Enabled,
+		locked:     m.Locked,
+		created:    m.Created,
+		updated:    m.Updated,
+	}
+}
+
 func New(name, username, email, pass string) (*user, error) {
 	hashedPass, err := crypto.HashPassword(pass)
 	if err != nil {
@@ -50,6 +65,11 @@ func New(name, username, email, pass string) (*user, error) {
 	}
 
 	return &u, nil
+}
+
+func (u *user) Enable() {
+	u.enabled = true
+	u.updated = time.Now()
 }
 
 func (u *user) ToModel() model.User {

@@ -24,6 +24,11 @@ type Config struct {
 	JWTSecretKey            string `mapstructure:"JWT_SECRET"`
 	JWTAccessTokenDuration  string `mapstructure:"JWT_ACCESS_TOKEN_DURATION"`
 	JWTRefreshTokenDuration string `mapstructure:"JWT_REFRESH_TOKEN_DURATION"`
+
+	RedisHost     string `mapstructure:"REDIS_HOST"`
+	RedisPort     string `mapstructure:"REDIS_PORT"`
+	RedisPassword string `mapstructure:"REDIS_PASSWORD"`
+	RedisDB       string `mapstructure:"REDIS_DB"`
 }
 
 func GetConfig() *Config {

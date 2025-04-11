@@ -20,6 +20,32 @@ func NewRepo(db *sqlx.DB) Repository {
 	return &repo{db: db}
 }
 
+func (r repo) Update(ctx context.Context, user model.User) error {
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
+	var query = `
+		UPDATE users
+		SET
+			name = :name,
+			username = :username,
+			email = :email,
+			password = :password,
+			avatar_url = :avatar_url,
+			enabled = :enabled,
+			locked = :locked,
+			updated = :updated
+		WHERE id = :id
+	`
+
+	_, err := r.db.NamedExecContext(ctx, query, user)
+	if err != nil {
+		return fault.New("failed to update user", fault.WithError(err))
+	}
+
+	return nil
+}
+
 func (r repo) GetByEmail(ctx context.Context, email string) (*model.User, error) {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()

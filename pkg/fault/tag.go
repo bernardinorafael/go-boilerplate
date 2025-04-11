@@ -21,6 +21,8 @@ const (
 	DB_RESOURCE_NOT_FOUND Tag = "DB_RESOURCE_NOT_FOUND"
 	INVALID_ENTITY        Tag = "INVALID_ENTITY"
 	MAILER_ERROR          Tag = "MAILER_ERROR"
+	EXPIRED               Tag = "EXPIRED"
+	CACHE_MISS            Tag = "CACHE_MISS_KEY"
 )
 
 // GetTag returns the first tag of the error

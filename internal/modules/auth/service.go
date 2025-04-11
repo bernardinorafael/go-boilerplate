@@ -6,10 +6,11 @@ import (
 	"time"
 
 	"github.com/bernardinorafael/go-boilerplate/internal/common/dto"
-	"github.com/bernardinorafael/go-boilerplate/internal/infra/database/model"
+	"github.com/bernardinorafael/go-boilerplate/internal/infra/http/middleware"
 	"github.com/bernardinorafael/go-boilerplate/internal/infra/mail"
 	"github.com/bernardinorafael/go-boilerplate/internal/modules/session"
 	"github.com/bernardinorafael/go-boilerplate/internal/modules/user"
+	"github.com/bernardinorafael/go-boilerplate/pkg/cache"
 	"github.com/bernardinorafael/go-boilerplate/pkg/crypto"
 	"github.com/bernardinorafael/go-boilerplate/pkg/logging"
 	"github.com/bernardinorafael/go-boilerplate/pkg/token"
@@ -22,44 +23,158 @@ const (
 	refreshTokenDuration = time.Hour * 24 * 30 // 30 days
 )
 
+// TODO: Remove userService dependency and user only the userRepo
+// TODO: Remove sessionService dependency and user only the sessionRepo
 type service struct {
 	log            logging.Logger
 	userService    user.Service
+	userRepo       user.Repository
 	sessionService session.Service
-	mailService    *mail.Mail
+	sessionRepo    session.Repository
+	mailer         *mail.Mail
+	cache          *cache.Cache
 	secretKey      string
 }
 
 func NewService(
 	log logging.Logger,
 	userService user.Service,
+	userRepo user.Repository,
 	sessionService session.Service,
-	mailService *mail.Mail,
+	sessionRepo session.Repository,
+	mailer *mail.Mail,
+	cache *cache.Cache,
 	secretKey string,
 ) Service {
 	return &service{
 		log:            log,
 		userService:    userService,
+		userRepo:       userRepo,
 		sessionService: sessionService,
-		mailService:    mailService,
+		sessionRepo:    sessionRepo,
+		mailer:         mailer,
+		cache:          cache,
 		secretKey:      secretKey,
 	}
 }
 
-func (s service) GetSigned(ctx context.Context, userId string) (*model.User, error) {
-	userRecord, err := s.userService.GetUserByID(ctx, userId)
-	if err != nil {
-		return nil, err // The error is already being handled in the user service
+func (s service) Logout(ctx context.Context) error {
+	c, ok := ctx.Value(middleware.AuthKey{}).(*token.Claims)
+	if !ok {
+		s.log.Error(ctx, "context does not contain auth key")
+		return fault.NewUnauthorized("access token no provided")
 	}
 
-	return userRecord, nil
+	sessRecord, err := s.sessionRepo.GetActiveByUserID(ctx, c.UserID)
+	if err != nil {
+		return fault.NewBadRequest("failed to retrieve active session")
+	} else if sessRecord == nil {
+		return fault.NewNotFound("active session not found")
+	}
+
+	session := session.NewFromModel(*sessRecord)
+	session.Deactivate()
+
+	err = s.sessionRepo.Update(ctx, session.ToModel())
+	if err != nil {
+		return fault.NewBadRequest("failed to deactivate session")
+	}
+
+	return nil
+}
+
+func (s service) Activate(ctx context.Context, userId string) error {
+	userRecord, err := s.userRepo.GetByID(ctx, userId)
+	if err != nil {
+		return fault.NewBadRequest("failed to get user by id")
+	} else if userRecord == nil {
+		return fault.NewNotFound("user not found")
+	}
+
+	if userRecord.Enabled {
+		return fault.New(
+			"expired activation link",
+			fault.WithHTTPCode(http.StatusBadRequest),
+			fault.WithTag(fault.EXPIRED),
+		)
+	}
+
+	user := user.NewFromModel(*userRecord)
+	user.Enable()
+
+	err = s.userRepo.Update(ctx, user.ToModel())
+	if err != nil {
+		s.log.Errorw(ctx, "failed to update user", logging.Err(err))
+		return fault.NewBadRequest("failed to update user")
+	}
+
+	return nil
+}
+
+func (s service) GetSignedUser(ctx context.Context) (*dto.UserResponse, error) {
+	c, ok := ctx.Value(middleware.AuthKey{}).(*token.Claims)
+	if !ok {
+		s.log.Error(ctx, "context does not contain auth key")
+		return nil, fault.NewUnauthorized("access token no provided")
+	}
+
+	var user *dto.UserResponse
+
+	err := s.cache.GetStruct(ctx, c.UserID, &user)
+	if err != nil {
+		switch {
+		case fault.GetTag(err) == fault.CACHE_MISS:
+			s.log.Infow(ctx, "user not found in cache", logging.Err(err))
+		default:
+			s.log.Errorw(ctx, "failed to get user from cache", logging.Err(err))
+		}
+	}
+
+	// If the user is found in the cache, return it
+	if user != nil {
+		s.log.Info(ctx, "returning user from cache")
+		return user, nil
+	}
+
+	userRecord, err := s.userRepo.GetByID(ctx, c.UserID)
+	if err != nil {
+		return nil, fault.NewBadRequest("failed to retrieve user")
+	} else if userRecord == nil {
+		return nil, fault.NewNotFound("user not found")
+	}
+
+	user = &dto.UserResponse{
+		ID:        userRecord.ID,
+		Name:      userRecord.Name,
+		Username:  userRecord.Username,
+		Email:     userRecord.Email,
+		AvatarURL: userRecord.AvatarURL,
+		Locked:    userRecord.Locked,
+		Created:   userRecord.Created,
+		Updated:   userRecord.Updated,
+	}
+
+	go func() {
+		// Setting new context to avoid context deadline exceeded
+		err = s.cache.SetStruct(context.Background(), user.ID, user, time.Minute*30)
+		if err != nil {
+			s.log.Errorw(ctx, "failed to set user in cache", logging.Err(err))
+		}
+	}()
+
+	return user, nil
 }
 
 func (s service) Register(ctx context.Context, input dto.CreateUser) error {
-	err := s.userService.CreateUser(ctx, input)
+	user, err := s.userService.CreateUser(ctx, input)
 	if err != nil {
 		s.log.Errorw(ctx, "failed to create user", logging.Err(err))
 		return err // The error is already being handled in the user service
+	}
+
+	err = s.cache.SetStruct(ctx, user.ID, user, time.Minute*30)
+	if err != nil {
+		s.log.Errorw(ctx, "failed to set user in cache", logging.Err(err))
 	}
 
 	// TODO: Send to a queue
@@ -80,22 +195,22 @@ func (s service) Register(ctx context.Context, input dto.CreateUser) error {
 	// 	}
 	// }()
 
-	s.log.Infow(ctx, "user created", logging.String("user_email", input.Email))
 	return nil
 }
 
 func (s service) Login(ctx context.Context, email, password, ip, agent string) (*dto.LoginResponse, error) {
-	user, err := s.userService.GetUserByEmail(ctx, email)
+	userRecord, err := s.userRepo.GetByEmail(ctx, email)
 	if err != nil {
-		s.log.Errorw(ctx, "failed to get user by email", logging.Err(err))
-		return nil, err // The error is already being handled in the user service
+		return nil, fault.NewBadRequest("failed to get user by id")
+	} else if userRecord == nil {
+		return nil, fault.NewNotFound("user not found")
 	}
 
-	if !crypto.PasswordMatches(password, user.Password) {
+	if !crypto.PasswordMatches(password, userRecord.Password) {
 		return nil, fault.NewUnauthorized("invalid credentials")
 	}
 
-	if user.Locked {
+	if userRecord.Locked {
 		return nil, fault.New(
 			"user is locked",
 			fault.WithHTTPCode(http.StatusUnauthorized),
@@ -103,7 +218,7 @@ func (s service) Login(ctx context.Context, email, password, ip, agent string) (
 		)
 	}
 
-	if !user.Enabled {
+	if !userRecord.Enabled {
 		return nil, fault.New(
 			"user must enable account to login",
 			fault.WithHTTPCode(http.StatusUnauthorized),
@@ -111,20 +226,31 @@ func (s service) Login(ctx context.Context, email, password, ip, agent string) (
 		)
 	}
 
+	err = s.sessionRepo.DeactivateAll(ctx, userRecord.ID)
+	if err != nil {
+		return nil, fault.NewBadRequest("failed to deactivate user sessions")
+	}
+
 	// Access token with 15 minutes expiration
-	accessToken, _, err := token.Gen(s.secretKey, user.ID, accessTokenDuration)
+	accessToken, _, err := token.Gen(s.secretKey, userRecord.ID, accessTokenDuration)
 	if err != nil {
 		s.log.Errorw(ctx, "failed to generate access token", logging.Err(err))
 		return nil, fault.NewUnauthorized(err.Error())
 	}
 	// Refresh token with 30 days expiration
-	refreshToken, _, err := token.Gen(s.secretKey, user.ID, refreshTokenDuration)
+	refreshToken, _, err := token.Gen(s.secretKey, userRecord.ID, refreshTokenDuration)
 	if err != nil {
 		s.log.Errorw(ctx, "failed to generate refresh token", logging.Err(err))
 		return nil, fault.NewUnauthorized(err.Error())
 	}
 
-	sessionId, err := s.sessionService.CreateSession(ctx, user.ID, ip, agent, refreshToken)
+	sessionParams := dto.CreateSession{
+		UserID:       userRecord.ID,
+		IP:           ip,
+		Agent:        agent,
+		RefreshToken: refreshToken,
+	}
+	sessionId, err := s.sessionService.CreateSession(ctx, sessionParams)
 	if err != nil {
 		return nil, err // The error is already being handled in the user service
 	}
