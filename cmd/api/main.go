@@ -13,6 +13,7 @@ import (
 	"github.com/bernardinorafael/go-boilerplate/internal/infra/http/middleware"
 	"github.com/bernardinorafael/go-boilerplate/internal/infra/mail"
 	"github.com/bernardinorafael/go-boilerplate/internal/modules/auth"
+	"github.com/bernardinorafael/go-boilerplate/internal/modules/product"
 	"github.com/bernardinorafael/go-boilerplate/internal/modules/session"
 	"github.com/bernardinorafael/go-boilerplate/internal/modules/user"
 	"github.com/bernardinorafael/go-boilerplate/pkg/cache"
@@ -20,7 +21,6 @@ import (
 	"github.com/bernardinorafael/go-boilerplate/pkg/logging"
 
 	"github.com/go-chi/chi"
-	cmid "github.com/go-chi/chi/middleware"
 	"github.com/go-chi/cors"
 )
 
@@ -37,7 +37,7 @@ func main() {
 
 	r := chi.NewRouter()
 	r.Use(
-		cmid.Logger,
+		// cmid.Logger,
 		middleware.WithIP,
 		middleware.WithRateLimit,
 		cors.Handler(cors.Options{
@@ -60,12 +60,19 @@ func main() {
 	}
 	defer cache.Close()
 
-	con, err := pg.NewConnection(cfg.PostgresDSN)
+	// redisconn, err := rdb.NewConnection(ctx, cfg)
+	// if err != nil {
+	// 	log.Criticalw(ctx, "failed to connect to redis", logging.Err(err))
+	// 	panic(err)
+	// }
+	// defer redisconn.Close()
+
+	pgconn, err := pg.NewConnection(cfg.PostgresDSN)
 	if err != nil {
 		log.Criticalw(ctx, "failed to connect database", logging.Err(err))
 		panic(err)
 	}
-	defer con.Close()
+	defer pgconn.Close()
 
 	// Mailer
 	mailService := mail.New(ctx, log, mail.Config{
@@ -75,11 +82,11 @@ func main() {
 		Timeout:    time.Second * 5,
 	})
 	// User
-	userRepo := user.NewRepo(con.DB())
+	userRepo := user.NewRepo(pgconn.DB())
 	userService := user.NewService(log, userRepo)
 	// Session
-	sessionRepo := session.NewRepo(con.DB())
-	sessionService := session.NewService(log, sessionRepo, userService, cfg.JWTSecretKey)
+	sessionRepo := session.NewRepo(pgconn.DB())
+	sessionService := session.NewService(log, sessionRepo, userService, cache, cfg.JWTSecretKey)
 	session.NewHandler(sessionService, cfg.JWTSecretKey).Register(r)
 	// Auth
 	// TODO: Consider using option pattern to avoid having so many parameters
@@ -94,6 +101,10 @@ func main() {
 		cfg.JWTSecretKey,
 	)
 	auth.NewHandler(authService, cfg.JWTSecretKey).Register(r)
+	// Products
+	productRepo := product.NewRepo(pgconn.DB())
+	productService := product.NewService(log, productRepo)
+	product.NewHandler(productService, cfg.JWTSecretKey).Register(r)
 
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%s", cfg.Port),

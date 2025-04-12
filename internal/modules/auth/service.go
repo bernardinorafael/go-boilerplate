@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -75,10 +76,25 @@ func (s service) Logout(ctx context.Context) error {
 	session := session.NewFromModel(*sessRecord)
 	session.Deactivate()
 
-	err = s.sessionRepo.Update(ctx, session.ToModel())
+	err = s.sessionRepo.Update(ctx, session.Model())
 	if err != nil {
 		return fault.NewBadRequest("failed to deactivate session")
 	}
+
+	go func() {
+		ctx := context.Background()
+
+		cacheKey := fmt.Sprintf("sess:%s", c.UserID)
+		has, err := s.cache.Has(ctx, cacheKey)
+		if err != nil {
+			s.log.Errorw(ctx, "failed to check if session is in cache", logging.Err(err))
+		} else if has {
+			err = s.cache.Delete(ctx, c.UserID)
+			if err != nil {
+				s.log.Errorw(ctx, "failed to delete session from cache", logging.Err(err))
+			}
+		}
+	}()
 
 	return nil
 }
@@ -102,7 +118,7 @@ func (s service) Activate(ctx context.Context, userId string) error {
 	user := user.NewFromModel(*userRecord)
 	user.Enable()
 
-	err = s.userRepo.Update(ctx, user.ToModel())
+	err = s.userRepo.Update(ctx, user.Model())
 	if err != nil {
 		s.log.Errorw(ctx, "failed to update user", logging.Err(err))
 		return fault.NewBadRequest("failed to update user")
@@ -118,24 +134,6 @@ func (s service) GetSignedUser(ctx context.Context) (*dto.UserResponse, error) {
 		return nil, fault.NewUnauthorized("access token no provided")
 	}
 
-	var user *dto.UserResponse
-
-	err := s.cache.GetStruct(ctx, c.UserID, &user)
-	if err != nil {
-		switch {
-		case fault.GetTag(err) == fault.CACHE_MISS:
-			s.log.Infow(ctx, "user not found in cache", logging.Err(err))
-		default:
-			s.log.Errorw(ctx, "failed to get user from cache", logging.Err(err))
-		}
-	}
-
-	// If the user is found in the cache, return it
-	if user != nil {
-		s.log.Info(ctx, "returning user from cache")
-		return user, nil
-	}
-
 	userRecord, err := s.userRepo.GetByID(ctx, c.UserID)
 	if err != nil {
 		return nil, fault.NewBadRequest("failed to retrieve user")
@@ -143,7 +141,7 @@ func (s service) GetSignedUser(ctx context.Context) (*dto.UserResponse, error) {
 		return nil, fault.NewNotFound("user not found")
 	}
 
-	user = &dto.UserResponse{
+	user := &dto.UserResponse{
 		ID:        userRecord.ID,
 		Name:      userRecord.Name,
 		Username:  userRecord.Username,
@@ -154,42 +152,29 @@ func (s service) GetSignedUser(ctx context.Context) (*dto.UserResponse, error) {
 		Updated:   userRecord.Updated,
 	}
 
-	go func() {
-		// Setting new context to avoid context deadline exceeded
-		err = s.cache.SetStruct(context.Background(), user.ID, user, time.Minute*30)
-		if err != nil {
-			s.log.Errorw(ctx, "failed to set user in cache", logging.Err(err))
-		}
-	}()
-
 	return user, nil
 }
 
 func (s service) Register(ctx context.Context, input dto.CreateUser) error {
-	user, err := s.userService.CreateUser(ctx, input)
+	_, err := s.userService.CreateUser(ctx, input)
 	if err != nil {
 		s.log.Errorw(ctx, "failed to create user", logging.Err(err))
 		return err // The error is already being handled in the user service
 	}
 
-	err = s.cache.SetStruct(ctx, user.ID, user, time.Minute*30)
-	if err != nil {
-		s.log.Errorw(ctx, "failed to set user in cache", logging.Err(err))
-	}
-
-	// TODO: Send to a queue
 	// go func() {
 	// 	params := mail.SendParams{
 	// 		From:    <your-notification-sender>,
-	// 		To:      input.Email,
+	// 		To:      <user-email>,
 	// 		Subject: "Activate your account",
 	// 		File:    "activate_user.html",
 	// 		Data: map[string]any{
+	// 			// TODO: Change the activation link
 	// 			"ActivationLink": <your-activation-link>,
-	// 			"Name":           input.Name,
+	// 			"Name":           <user-name>,
 	// 		},
 	// 	}
-	// 	err := s.mailService.Send(params)
+	// 	err := s.mailer.Send(params)
 	// 	if err != nil {
 	// 		s.log.Errorw(ctx, "failed to send email", logging.Err(err))
 	// 	}
@@ -205,6 +190,7 @@ func (s service) Login(ctx context.Context, email, password, ip, agent string) (
 	} else if userRecord == nil {
 		return nil, fault.NewNotFound("user not found")
 	}
+	userID := userRecord.ID
 
 	if !crypto.PasswordMatches(password, userRecord.Password) {
 		return nil, fault.NewUnauthorized("invalid credentials")
@@ -226,37 +212,33 @@ func (s service) Login(ctx context.Context, email, password, ip, agent string) (
 		)
 	}
 
-	err = s.sessionRepo.DeactivateAll(ctx, userRecord.ID)
+	err = s.sessionRepo.DeactivateAll(ctx, userID)
 	if err != nil {
 		return nil, fault.NewBadRequest("failed to deactivate user sessions")
 	}
 
-	// Access token with 15 minutes expiration
-	accessToken, _, err := token.Gen(s.secretKey, userRecord.ID, accessTokenDuration)
+	accessToken, _, err := token.Gen(s.secretKey, userID, accessTokenDuration)
 	if err != nil {
-		s.log.Errorw(ctx, "failed to generate access token", logging.Err(err))
 		return nil, fault.NewUnauthorized(err.Error())
 	}
-	// Refresh token with 30 days expiration
-	refreshToken, _, err := token.Gen(s.secretKey, userRecord.ID, refreshTokenDuration)
+	refreshToken, _, err := token.Gen(s.secretKey, userID, refreshTokenDuration)
 	if err != nil {
-		s.log.Errorw(ctx, "failed to generate refresh token", logging.Err(err))
 		return nil, fault.NewUnauthorized(err.Error())
 	}
 
-	sessionParams := dto.CreateSession{
-		UserID:       userRecord.ID,
+	params := dto.CreateSession{
 		IP:           ip,
 		Agent:        agent,
+		UserID:       userID,
 		RefreshToken: refreshToken,
 	}
-	sessionId, err := s.sessionService.CreateSession(ctx, sessionParams)
+	sess, err := s.sessionService.CreateSession(ctx, params)
 	if err != nil {
 		return nil, err // The error is already being handled in the user service
 	}
 
 	response := dto.LoginResponse{
-		SessionID:    sessionId,
+		SessionID:    sess.ID,
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 	}

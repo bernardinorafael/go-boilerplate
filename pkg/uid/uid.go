@@ -9,10 +9,11 @@ import (
 
 const epochTimestampInSeconds = 1700000000
 
-//	// Generate an ID with a custom prefix
-//	id := uid.New("invoice") // returns "invoice_1z4UVH4CbRPvgSfCBmheK2h8xZb"
+// New generates a unique identifier with an optional prefix.
 //
-//	// Generate an ID without a prefix
+// Example:
+//
+//	id := uid.New("invoice") // returns "invoice_1z4UVH4CbRPvgSfCBmheK2h8xZb"
 //	id := uid.New("") // returns "1z4UVH4CbRPvgSfCBmheK2h8xZb"
 func New(prefix string) string {
 	buf := make([]byte, 12)

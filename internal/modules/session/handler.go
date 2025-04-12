@@ -6,6 +6,7 @@ import (
 
 	"github.com/bernardinorafael/go-boilerplate/internal/infra/http/middleware"
 	"github.com/bernardinorafael/go-boilerplate/pkg/fault"
+	"github.com/bernardinorafael/go-boilerplate/pkg/token"
 	httputil "github.com/bernardinorafael/gogem/pkg/httputil"
 	"github.com/go-chi/chi"
 )
@@ -36,9 +37,28 @@ func (h handler) Register(r *chi.Mux) {
 	r.Route("/api/v1/sessions", func(r chi.Router) {
 		// Private
 		r.With(m.WithAuth).Get("/", h.handleGetSessions)
+		r.With(m.WithAuth).Get("/me", h.handleGetSignedSession)
 		// Public
 		r.Post("/refresh", h.handleRenewToken)
 	})
+}
+
+func (h handler) handleGetSignedSession(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	c, ok := ctx.Value(middleware.AuthKey{}).(*token.Claims)
+	if !ok {
+		fault.NewHTTPError(w, fault.NewUnauthorized("invalid access token"))
+		return
+	}
+
+	res, err := h.sessionService.GetSessionByUserID(ctx, c.UserID)
+	if err != nil {
+		fault.NewHTTPError(w, err)
+		return
+	}
+
+	httputil.WriteJSON(w, http.StatusOK, res)
 }
 
 func (h handler) handleRenewToken(w http.ResponseWriter, r *http.Request) {

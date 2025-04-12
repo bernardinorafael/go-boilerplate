@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS "sessions" (
 
 -- Add foreign key constraint to sessions table
 ALTER TABLE "sessions"
-	ADD CONSTRAINT "fk_sessions_user_id" FOREIGN KEY ("user_id") REFERENCES "users" ("id");
+	ADD CONSTRAINT "fk_sessions_user_id" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE CASCADE;
 
 -- Create indexes for better query performance
 CREATE INDEX "idx_users_created" ON "users" ("created");

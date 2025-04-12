@@ -19,7 +19,8 @@ type Repository interface {
 }
 
 type Service interface {
-	CreateSession(ctx context.Context, input dto.CreateSession) (sessionId string, err error)
-	GetAllSessions(ctx context.Context) ([]dto.SessionResponse, error)
+	CreateSession(ctx context.Context, input dto.CreateSession) (*dto.SessionResponse, error)
 	RenewAccessToken(ctx context.Context, refreshToken string) (*dto.RenewAccessToken, error)
+	GetAllSessions(ctx context.Context) ([]dto.SessionResponse, error)
+	GetSessionByUserID(ctx context.Context, userID string) (*dto.SessionResponse, error)
 }

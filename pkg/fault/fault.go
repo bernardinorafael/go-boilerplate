@@ -62,9 +62,9 @@ func (f *Fault) GetHTTPCode() int {
 
 func (f *Fault) Error() string {
 	if f.Err != nil {
-		return fmt.Sprintf("%s:%s (caused by: %v)", f.Tag, f.Message, f.Err)
+		return fmt.Sprintf("%s: %s (caused by: %v)", f.Tag, f.Message, f.Err)
 	}
-	return fmt.Sprintf("%s:%s", f.Tag, f.Message)
+	return fmt.Sprintf("%s: %s", f.Tag, f.Message)
 }
 
 func (f *Fault) Is(target error) bool {

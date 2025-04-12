@@ -38,7 +38,7 @@ func (s service) CreateUser(ctx context.Context, input dto.CreateUser) (*dto.Use
 		return nil, fault.NewUnprocessableEntity("failed to create user entity")
 
 	}
-	model := newUser.ToModel()
+	model := newUser.Model()
 
 	if err = s.userRepo.Insert(ctx, model); err != nil {
 		var pqErr *pq.Error

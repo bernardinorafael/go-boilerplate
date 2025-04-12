@@ -72,7 +72,7 @@ func (u *user) Enable() {
 	u.updated = time.Now()
 }
 
-func (u *user) ToModel() model.User {
+func (u *user) Model() model.User {
 	return model.User{
 		ID:        u.id,
 		Name:      u.name,

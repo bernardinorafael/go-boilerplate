@@ -80,8 +80,17 @@ func (c *Cache) GetStruct(ctx context.Context, key string, data any) error {
 	return nil
 }
 
-func (c *Cache) Get(ctx context.Context, key string) ([]byte, error) {
-	return c.get(ctx, key)
+func (c *Cache) SetString(ctx context.Context, key string, data string, ttl time.Duration) error {
+	return c.set(ctx, key, []byte(data), ttl)
+}
+
+func (c *Cache) GetString(ctx context.Context, key string) (string, error) {
+	val, err := c.get(ctx, key)
+	if err != nil {
+		return "", err // The error is already being handled in the Get function
+	}
+
+	return string(val), nil
 }
 
 // SetStruct receives a key and a struct
@@ -133,8 +142,8 @@ func (c *Cache) get(ctx context.Context, key string) ([]byte, error) {
 }
 
 // set is a helper function that sets a value in the cache
-func (c *Cache) set(ctx context.Context, key string, value []byte, ttl time.Duration) error {
-	err := c.redis.Set(ctx, key, value, ttl).Err()
+func (c *Cache) set(ctx context.Context, key string, data []byte, ttl time.Duration) error {
+	err := c.redis.Set(ctx, key, data, ttl).Err()
 	if err != nil {
 		return fault.New("failed to set value in cache", fault.WithError(err))
 	}

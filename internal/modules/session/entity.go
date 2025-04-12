@@ -81,7 +81,7 @@ func (s *session) validate() error {
 	return nil
 }
 
-func (s *session) ToModel() model.Session {
+func (s *session) Model() model.Session {
 	return model.Session{
 		ID:           s.id,
 		UserID:       s.userId,

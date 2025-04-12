@@ -26,3 +26,11 @@ type User struct {
 	Created   time.Time `db:"created"`
 	Updated   time.Time `db:"updated"`
 }
+
+type Product struct {
+	ID      string    `db:"id"`
+	Name    string    `db:"name"`
+	Price   int64     `db:"price"`
+	Created time.Time `db:"created"`
+	Updated time.Time `db:"updated"`
+}
