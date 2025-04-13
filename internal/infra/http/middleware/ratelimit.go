@@ -21,7 +21,7 @@ type client struct {
 	lastSeen time.Time
 }
 
-func WithRateLimit(next http.Handler) http.Handler {
+func withRateLimit(next http.Handler) http.Handler {
 	var mu sync.Mutex
 	var clients = make(map[string]*client)
 

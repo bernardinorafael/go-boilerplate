@@ -2,153 +2,117 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"errors"
+	"log/slog"
 	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
+	"github.com/bernardinorafael/go-boilerplate/internal/config"
 	"github.com/bernardinorafael/go-boilerplate/internal/infra/database/pg"
 	"github.com/bernardinorafael/go-boilerplate/internal/infra/http/middleware"
+	"github.com/bernardinorafael/go-boilerplate/internal/infra/http/server"
 	"github.com/bernardinorafael/go-boilerplate/internal/infra/mail"
 	"github.com/bernardinorafael/go-boilerplate/internal/modules/auth"
 	"github.com/bernardinorafael/go-boilerplate/internal/modules/product"
 	"github.com/bernardinorafael/go-boilerplate/internal/modules/session"
 	"github.com/bernardinorafael/go-boilerplate/internal/modules/user"
 	"github.com/bernardinorafael/go-boilerplate/pkg/cache"
-	"github.com/bernardinorafael/go-boilerplate/pkg/config"
-	"github.com/bernardinorafael/go-boilerplate/pkg/logging"
+	"github.com/bernardinorafael/go-boilerplate/pkg/metric"
 
 	"github.com/go-chi/chi"
-	"github.com/go-chi/cors"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func main() {
-	ctx := context.Background()
 	cfg := config.GetConfig()
-
-	log := logging.New(logging.LogParams{
-		AppName:                  cfg.AppName,
-		DebugLevel:               cfg.DebugMode,
-		AddAttributesFromContext: nil,
-		LogToFile:                false,
-	})
+	metrics := metric.New()
+	ctx := context.Background()
 
 	r := chi.NewRouter()
-	r.Use(
-		// cmid.Logger,
-		middleware.WithIP,
-		middleware.WithRateLimit,
-		cors.Handler(cors.Options{
-			AllowedOrigins:   []string{"https://*", "http://*"},
-			AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-			AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
-			AllowCredentials: true,
-			MaxAge:           300,
-		}),
-	)
-
-	cache, err := cache.New(ctx, &cache.Config{
-		Host:     cfg.RedisHost,
-		Port:     cfg.RedisPort,
-		Password: cfg.RedisPassword,
+	middleware.Apply(r, middleware.Config{
+		Metrics: metrics,
 	})
+	r.Handle("/metrics", promhttp.HandlerFor(metrics.Registry(), promhttp.HandlerOpts{}))
+
+	cache, err := cache.New(ctx, cfg.RedisHost, cfg.RedisPort, cfg.RedisPassword)
 	if err != nil {
-		log.Criticalw(ctx, "failed to connect to cache", logging.Err(err))
+		slog.Error("failed to connect to cache", "error", err)
 		panic(err)
 	}
 	defer cache.Close()
 
-	// redisconn, err := rdb.NewConnection(ctx, cfg)
-	// if err != nil {
-	// 	log.Criticalw(ctx, "failed to connect to redis", logging.Err(err))
-	// 	panic(err)
-	// }
-	// defer redisconn.Close()
-
 	pgconn, err := pg.NewConnection(cfg.PostgresDSN)
 	if err != nil {
-		log.Criticalw(ctx, "failed to connect database", logging.Err(err))
+		slog.Error("failed to connect database", "error", err)
 		panic(err)
 	}
 	defer pgconn.Close()
 
-	// Mailer
-	mailService := mail.New(ctx, log, mail.Config{
-		MaxRetries: 3,
+	// Repositories
+	userRepo := user.NewRepo(pgconn.DB())
+	sessRepo := session.NewRepo(pgconn.DB())
+	prodRepo := product.NewRepo(pgconn.DB())
+
+	// Services
+	mailService := mail.New(ctx, mail.Config{
 		APIKey:     cfg.ResendKey,
 		RetryDelay: time.Second * 2,
 		Timeout:    time.Second * 5,
+		MaxRetries: 3,
 	})
-	// User
-	userRepo := user.NewRepo(pgconn.DB())
-	userService := user.NewService(log, userRepo)
-	// Session
-	sessionRepo := session.NewRepo(pgconn.DB())
-	sessionService := session.NewService(log, sessionRepo, userService, cache, cfg.JWTSecretKey)
-	session.NewHandler(sessionService, cfg.JWTSecretKey).Register(r)
-	// Auth
-	// TODO: Consider using option pattern to avoid having so many parameters
-	authService := auth.NewService(
-		log,
-		userService,
-		userRepo,
-		sessionService,
-		sessionRepo,
-		mailService,
-		cache,
-		cfg.JWTSecretKey,
-	)
-	auth.NewHandler(authService, cfg.JWTSecretKey).Register(r)
-	// Products
-	productRepo := product.NewRepo(pgconn.DB())
-	productService := product.NewService(log, productRepo)
-	product.NewHandler(productService, cfg.JWTSecretKey).Register(r)
+	userService := user.NewService(user.ServiceConfig{
+		UserRepo: userRepo,
+	})
+	sessionService := session.NewService(session.ServiceConfig{
+		SessionRepo: sessRepo,
+		UserService: userService,
+		Cache:       cache,
+		Metrics:     metrics,
+		SecretKey:   cfg.JWTSecretKey,
+	})
+	prodService := product.NewService(product.ServiceConfig{
+		ProductRepo: prodRepo,
+		Metrics:     metrics,
+		Cache:       cache,
+	})
+	authService := auth.NewService(auth.ServiceConfig{
+		UserService:    userService,
+		UserRepo:       userRepo,
+		SessionService: sessionService,
+		SessionRepo:    sessRepo,
+		Mailer:         mailService,
+		Cache:          cache,
+		Metrics:        metrics,
+		SecretKey:      cfg.JWTSecretKey,
+	})
 
-	server := &http.Server{
-		Addr:         fmt.Sprintf(":%s", cfg.Port),
+	// Handlers
+	auth.NewHandler(authService, cfg.JWTSecretKey).Register(r)
+	session.NewHandler(sessionService, cfg.JWTSecretKey).Register(r)
+	product.NewHandler(prodService, cfg.JWTSecretKey).Register(r)
+
+	srv := server.New(server.Config{
+		Port:         cfg.Port,
 		IdleTimeout:  time.Minute,
 		ReadTimeout:  time.Second * 5,
 		WriteTimeout: time.Second * 10,
-		Handler:      r,
-	}
-	log.Info(ctx, "Starting server")
+		Router:       r,
+	})
 
-	shutdownErr := make(chan error)
-	go func() {
-		stop := make(chan os.Signal, 1)
-		signal.Notify(
-			stop,
-			syscall.SIGHUP,
-			syscall.SIGINT,
-			syscall.SIGTERM,
-			syscall.SIGQUIT,
-		)
-		sig := <-stop
+	shutdoewnErr := srv.GracefulShutdown(ctx, time.Second*30)
 
-		log.Infow(ctx,
-			"caught signal...",
-			logging.String("signal", sig.String()),
-		)
-
-		ctx, cancel := context.WithTimeout(ctx, time.Second*30)
-		defer cancel()
-
-		shutdownErr <- server.Shutdown(ctx)
-	}()
-
-	err = server.ListenAndServe()
-	if err != nil && err != http.ErrServerClosed {
-		log.Criticalw(ctx, "failed to start server", logging.Err(err))
+	err = srv.Start()
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		slog.Error("failed to start server", "error", err)
 		os.Exit(1)
 	}
 
-	err = <-shutdownErr
+	err = <-shutdoewnErr
 	if err != nil {
-		log.Criticalw(ctx, "failed to shutdown server gracefully", logging.Err(err))
+		slog.Error("failed to shutdown server", "error", err)
 		os.Exit(1)
 	}
 
-	log.Info(ctx, "Server shutdown gracefully")
+	slog.Info("server shutdown gracefully")
 }

@@ -3,18 +3,19 @@ package auth
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/bernardinorafael/go-boilerplate/internal/common/dto"
 	"github.com/bernardinorafael/go-boilerplate/internal/infra/http/middleware"
+	"github.com/bernardinorafael/go-boilerplate/internal/infra/http/token"
 	"github.com/bernardinorafael/go-boilerplate/internal/infra/mail"
 	"github.com/bernardinorafael/go-boilerplate/internal/modules/session"
 	"github.com/bernardinorafael/go-boilerplate/internal/modules/user"
 	"github.com/bernardinorafael/go-boilerplate/pkg/cache"
 	"github.com/bernardinorafael/go-boilerplate/pkg/crypto"
-	"github.com/bernardinorafael/go-boilerplate/pkg/logging"
-	"github.com/bernardinorafael/go-boilerplate/pkg/token"
+	"github.com/bernardinorafael/go-boilerplate/pkg/metric"
 
 	"github.com/bernardinorafael/go-boilerplate/pkg/fault"
 )
@@ -24,61 +25,71 @@ const (
 	refreshTokenDuration = time.Hour * 24 * 30 // 30 days
 )
 
+type ServiceConfig struct {
+	SecretKey string
+
+	UserService    user.Service
+	UserRepo       user.Repository
+	SessionService session.Service
+	SessionRepo    session.Repository
+
+	Mailer  *mail.Mail
+	Cache   *cache.Cache
+	Metrics *metric.Metric
+}
+
 // TODO: Remove userService dependency and user only the userRepo
 // TODO: Remove sessionService dependency and user only the sessionRepo
 type service struct {
-	log            logging.Logger
 	userService    user.Service
 	userRepo       user.Repository
 	sessionService session.Service
 	sessionRepo    session.Repository
 	mailer         *mail.Mail
 	cache          *cache.Cache
+	metrics        *metric.Metric
 	secretKey      string
 }
 
-func NewService(
-	log logging.Logger,
-	userService user.Service,
-	userRepo user.Repository,
-	sessionService session.Service,
-	sessionRepo session.Repository,
-	mailer *mail.Mail,
-	cache *cache.Cache,
-	secretKey string,
-) Service {
+func NewService(c ServiceConfig) Service {
 	return &service{
-		log:            log,
-		userService:    userService,
-		userRepo:       userRepo,
-		sessionService: sessionService,
-		sessionRepo:    sessionRepo,
-		mailer:         mailer,
-		cache:          cache,
-		secretKey:      secretKey,
+		userService:    c.UserService,
+		userRepo:       c.UserRepo,
+		sessionService: c.SessionService,
+		sessionRepo:    c.SessionRepo,
+		mailer:         c.Mailer,
+		cache:          c.Cache,
+		metrics:        c.Metrics,
+		secretKey:      c.SecretKey,
 	}
 }
 
 func (s service) Logout(ctx context.Context) error {
 	c, ok := ctx.Value(middleware.AuthKey{}).(*token.Claims)
 	if !ok {
-		s.log.Error(ctx, "context does not contain auth key")
+		slog.Error("context does not contain auth key")
 		return fault.NewUnauthorized("access token no provided")
 	}
 
 	sessRecord, err := s.sessionRepo.GetActiveByUserID(ctx, c.UserID)
 	if err != nil {
+		s.metrics.RecordError("auth", "get-active-user-by-id")
 		return fault.NewBadRequest("failed to retrieve active session")
 	} else if sessRecord == nil {
 		return fault.NewNotFound("active session not found")
 	}
 
-	session := session.NewFromModel(*sessRecord)
-	session.Deactivate()
+	sess := session.NewFromModel(*sessRecord)
+	sess.Deactivate()
 
-	err = s.sessionRepo.Update(ctx, session.Model())
+	err = s.sessionRepo.Update(ctx, sess.Model())
 	if err != nil {
 		return fault.NewBadRequest("failed to deactivate session")
+	}
+
+	err = s.cache.Delete(ctx, fmt.Sprintf("sess:%s", c.UserID))
+	if err != nil {
+		slog.Error("failed to delete session from cache", "error", err)
 	}
 
 	go func() {
@@ -87,11 +98,11 @@ func (s service) Logout(ctx context.Context) error {
 		cacheKey := fmt.Sprintf("sess:%s", c.UserID)
 		has, err := s.cache.Has(ctx, cacheKey)
 		if err != nil {
-			s.log.Errorw(ctx, "failed to check if session is in cache", logging.Err(err))
+			slog.Error("failed to check if session is in cache", "error", err)
 		} else if has {
 			err = s.cache.Delete(ctx, c.UserID)
 			if err != nil {
-				s.log.Errorw(ctx, "failed to delete session from cache", logging.Err(err))
+				slog.Error("failed to delete session from cache", "error", err)
 			}
 		}
 	}()
@@ -102,6 +113,7 @@ func (s service) Logout(ctx context.Context) error {
 func (s service) Activate(ctx context.Context, userId string) error {
 	userRecord, err := s.userRepo.GetByID(ctx, userId)
 	if err != nil {
+		s.metrics.RecordError("auth", "get-user-by-ud")
 		return fault.NewBadRequest("failed to get user by id")
 	} else if userRecord == nil {
 		return fault.NewNotFound("user not found")
@@ -115,12 +127,12 @@ func (s service) Activate(ctx context.Context, userId string) error {
 		)
 	}
 
-	user := user.NewFromModel(*userRecord)
-	user.Enable()
+	u := user.NewFromModel(*userRecord)
+	u.Enable()
 
-	err = s.userRepo.Update(ctx, user.Model())
+	err = s.userRepo.Update(ctx, u.Model())
 	if err != nil {
-		s.log.Errorw(ctx, "failed to update user", logging.Err(err))
+		s.metrics.RecordError("auth", "update-user")
 		return fault.NewBadRequest("failed to update user")
 	}
 
@@ -130,12 +142,13 @@ func (s service) Activate(ctx context.Context, userId string) error {
 func (s service) GetSignedUser(ctx context.Context) (*dto.UserResponse, error) {
 	c, ok := ctx.Value(middleware.AuthKey{}).(*token.Claims)
 	if !ok {
-		s.log.Error(ctx, "context does not contain auth key")
+		slog.Error("context does not contain auth key")
 		return nil, fault.NewUnauthorized("access token no provided")
 	}
 
 	userRecord, err := s.userRepo.GetByID(ctx, c.UserID)
 	if err != nil {
+		s.metrics.RecordError("auth", "get-user-by-id")
 		return nil, fault.NewBadRequest("failed to retrieve user")
 	} else if userRecord == nil {
 		return nil, fault.NewNotFound("user not found")
@@ -158,25 +171,26 @@ func (s service) GetSignedUser(ctx context.Context) (*dto.UserResponse, error) {
 func (s service) Register(ctx context.Context, input dto.CreateUser) error {
 	_, err := s.userService.CreateUser(ctx, input)
 	if err != nil {
-		s.log.Errorw(ctx, "failed to create user", logging.Err(err))
+		slog.Error("failed to create user", "error", err)
 		return err // The error is already being handled in the user service
 	}
 
 	// go func() {
 	// 	params := mail.SendParams{
-	// 		From:    <your-notification-sender>,
+	// 		From:    <email-sender>,
 	// 		To:      <user-email>,
 	// 		Subject: "Activate your account",
 	// 		File:    "activate_user.html",
 	// 		Data: map[string]any{
 	// 			// TODO: Change the activation link
-	// 			"ActivationLink": <your-activation-link>,
+	// 			"ActivationLink": <activation-link>,
 	// 			"Name":           <user-name>,
 	// 		},
 	// 	}
 	// 	err := s.mailer.Send(params)
 	// 	if err != nil {
-	// 		s.log.Errorw(ctx, "failed to send email", logging.Err(err))
+	// 		s.metrics.RecordError("mailer", "send")
+	// 		slog.Error("failed to send email", "error", err)
 	// 	}
 	// }()
 
@@ -186,7 +200,8 @@ func (s service) Register(ctx context.Context, input dto.CreateUser) error {
 func (s service) Login(ctx context.Context, email, password, ip, agent string) (*dto.LoginResponse, error) {
 	userRecord, err := s.userRepo.GetByEmail(ctx, email)
 	if err != nil {
-		return nil, fault.NewBadRequest("failed to get user by id")
+		s.metrics.RecordError("auth", "get-user-by-email")
+		return nil, fault.NewBadRequest("failed to get user by email")
 	} else if userRecord == nil {
 		return nil, fault.NewNotFound("user not found")
 	}
@@ -214,6 +229,7 @@ func (s service) Login(ctx context.Context, email, password, ip, agent string) (
 
 	err = s.sessionRepo.DeactivateAll(ctx, userID)
 	if err != nil {
+		s.metrics.RecordError("auth", "deactivate-all-sessions")
 		return nil, fault.NewBadRequest("failed to deactivate user sessions")
 	}
 

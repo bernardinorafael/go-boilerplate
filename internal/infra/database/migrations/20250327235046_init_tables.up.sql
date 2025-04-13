@@ -8,8 +8,8 @@ CREATE TABLE IF NOT EXISTS "users" (
 	"avatar_url" VARCHAR(255) NULL,
 	"enabled" BOOLEAN DEFAULT true,
 	"locked" BOOLEAN DEFAULT false,
-	"created" TIMESTAMPTZ DEFAULT now(),
-	"updated" TIMESTAMPTZ DEFAULT now()
+	"created" TIMESTAMPTZ DEFAULT now (),
+	"updated" TIMESTAMPTZ DEFAULT now ()
 );
 
 -- Create sessions table
@@ -21,15 +21,16 @@ CREATE TABLE IF NOT EXISTS "sessions" (
 	"refresh_token" VARCHAR(255),
 	"active" BOOLEAN DEFAULT true,
 	"expires" TIMESTAMPTZ,
-	"created" TIMESTAMPTZ DEFAULT now(),
-	"updated" TIMESTAMPTZ DEFAULT now()
+	"created" TIMESTAMPTZ DEFAULT now (),
+	"updated" TIMESTAMPTZ DEFAULT now ()
 );
 
 -- Add foreign key constraint to sessions table
-ALTER TABLE "sessions"
-	ADD CONSTRAINT "fk_sessions_user_id" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE CASCADE;
+ALTER TABLE "sessions" ADD CONSTRAINT "fk_sessions_user_id" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE CASCADE;
 
 -- Create indexes for better query performance
 CREATE INDEX "idx_users_created" ON "users" ("created");
+
 CREATE INDEX "idx_sessions_active" ON "sessions" ("active");
+
 CREATE INDEX "idx_sessions_refresh_token" ON "sessions" ("refresh_token");

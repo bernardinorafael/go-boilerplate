@@ -27,7 +27,6 @@ psql: # Access the PostgreSQL container
 
 .PHONY: run
 run: # Execute the Go server
-	@echo "=====> Running Go server"
 	@go run cmd/api/main.go
 
 .PHONY: migrate

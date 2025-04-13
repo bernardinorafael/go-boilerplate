@@ -1,6 +1,6 @@
 services:
   db:
-    container_name: ${APP_NAME}-postgres
+    container_name: go-boilerplate-postgres
     image: bitnami/postgresql:latest
     env_file: ".env"
     environment:
@@ -11,12 +11,12 @@ services:
     ports:
       - 5432:5432
     volumes:
-      - go-boilerplate-data:/bitnami/postgresql
+      - go-boilerplate-volumes:/bitnami/postgresql
     networks:
       - go-boilerplate-network
 
   cache:
-    container_name: ${APP_NAME}-redis
+    container_name: go-boilerplate-redis
     image: redis:7.2-alpine
     ports:
       - 6379:6379
@@ -24,7 +24,7 @@ services:
       - go-boilerplate-network
 
   air:
-    container_name: ${APP_NAME}-air
+    container_name: go-boilerplate-air
     image: cosmtrek/air:latest
     working_dir: /app
     ports:
@@ -42,8 +42,43 @@ services:
     depends_on:
       - db
 
+  prometheus:
+    image: prom/prometheus
+    container_name: go-boilerplate-prometheus
+    restart: unless-stopped
+    ports:
+      - 9090:9090
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.console.libraries=/etc/prometheus/console_libraries
+      - --web.console.templates=/etc/prometheus/consoles
+      - --web.enable-lifecycle
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    networks:
+      - go-boilerplate-network
+
+  grafana:
+    image: grafana/grafana
+    container_name: go-boilerplate-grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=grafana
+    ports:
+      - 3000:3000
+    volumes:
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+    depends_on:
+      - prometheus
+    networks:
+      - go-boilerplate-network
+
 volumes:
-  go-boilerplate-data:
+  go-boilerplate-volumes:
+  prometheus-data:
 
 networks:
   go-boilerplate-network:

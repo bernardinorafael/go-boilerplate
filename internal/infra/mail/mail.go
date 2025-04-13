@@ -5,13 +5,13 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 
 	"html/template"
 
 	"github.com/bernardinorafael/go-boilerplate/pkg/fault"
-	"github.com/bernardinorafael/go-boilerplate/pkg/logging"
 	"github.com/resend/resend-go/v2"
 )
 
@@ -35,15 +35,13 @@ type Config struct {
 
 type Mail struct {
 	ctx    context.Context
-	log    logging.Logger
 	client *resend.Client
 	config Config
 }
 
-func New(ctx context.Context, log logging.Logger, config Config) *Mail {
+func New(ctx context.Context, config Config) *Mail {
 	return &Mail{
 		ctx:    ctx,
-		log:    log,
 		client: resend.NewClient(config.APIKey),
 		config: config,
 	}
@@ -54,7 +52,7 @@ func (m *Mail) Send(p SendParams) error {
 
 	tmpl, err := template.New("email").ParseFS(templateFS, tmplLocation)
 	if err != nil {
-		m.log.Errorw(m.ctx, "error on parse template", logging.Err(err))
+		slog.Error("failed to parse template", "error", err)
 		return fault.New(
 			"failed to parse template",
 			fault.WithHTTPCode(http.StatusInternalServerError),
@@ -65,7 +63,7 @@ func (m *Mail) Send(p SendParams) error {
 
 	var body bytes.Buffer
 	if err := tmpl.Execute(&body, p.Data); err != nil {
-		m.log.Errorw(m.ctx, "error on execute template", logging.Err(err))
+		slog.Error("failed to execute template", "error", err)
 		return fault.New(
 			"failed to execute template",
 			fault.WithHTTPCode(http.StatusInternalServerError),
@@ -93,17 +91,18 @@ func (m *Mail) send(p *resend.SendEmailRequest, maxRetries int) error {
 
 		_, err := m.client.Emails.SendWithContext(ctx, p)
 		if err == nil {
-			m.log.Infow(ctx, "email sent",
-				logging.Int("attempt", attempt),
-				logging.String("to", p.To[0]),
+			slog.Info("email sent",
+				"attempt", attempt,
+				"to", p.To[0],
 			)
 			return nil
 		}
 
-		m.log.Errorw(ctx, "error on send email",
-			logging.Err(err),
-			logging.Int("attempt", attempt),
-			logging.String("to", p.To[0]),
+		slog.Error(
+			"error on send email",
+			"error", err,
+			"attempt", attempt,
+			"to", p.To[0],
 		)
 
 		mailerErr = err

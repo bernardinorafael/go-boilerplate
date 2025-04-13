@@ -2,6 +2,6 @@ CREATE TABLE IF NOT EXISTS "products" (
 	"id" VARCHAR(255) PRIMARY KEY,
 	"name" VARCHAR(255) UNIQUE NOT NULL,
 	"price" INTEGER NOT NULL,
-	"created" TIMESTAMPTZ DEFAULT now(),
-	"updated" TIMESTAMPTZ DEFAULT now()
+	"created" TIMESTAMPTZ DEFAULT now (),
+	"updated" TIMESTAMPTZ DEFAULT now ()
 );

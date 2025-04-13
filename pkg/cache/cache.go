@@ -11,21 +11,14 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-type Config struct {
-	Host     string
-	Port     string
-	Password string
-	DB       int
-}
-
 type Cache struct {
 	redis *redis.Client
 }
 
-func New(ctx context.Context, config *Config) (*Cache, error) {
+func New(ctx context.Context, host, port, password string) (*Cache, error) {
 	redisClient := redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%s", config.Host, config.Port),
-		Password: config.Password,
+		Addr:     fmt.Sprintf("%s:%s", host, port),
+		Password: password,
 		DB:       0,
 	})
 
@@ -101,12 +94,12 @@ func (c *Cache) GetString(ctx context.Context, key string) (string, error) {
 //	err := cache.SetStruct(ctx, "user:1", user, time.Minute*10)
 //	if err != nil {...}
 func (c *Cache) SetStruct(ctx context.Context, key string, data any, ttl time.Duration) error {
-	s, err := json.Marshal(data)
+	b, err := json.Marshal(data)
 	if err != nil {
 		return fault.New("failed to marshal data", fault.WithError(err))
 	}
 
-	return c.set(ctx, key, s, ttl)
+	return c.set(ctx, key, b, ttl)
 }
 
 // Has checks if a key exists in the cache

@@ -8,20 +8,20 @@ import (
 	"github.com/bernardinorafael/go-boilerplate/internal/common/dto"
 	"github.com/bernardinorafael/go-boilerplate/pkg/dbutil"
 	"github.com/bernardinorafael/go-boilerplate/pkg/fault"
-	"github.com/bernardinorafael/go-boilerplate/pkg/logging"
-
 	"github.com/lib/pq"
 )
 
+type ServiceConfig struct {
+	UserRepo Repository
+}
+
 type service struct {
-	log      logging.Logger
 	userRepo Repository
 }
 
-func NewService(log logging.Logger, userRepo Repository) Service {
+func NewService(c ServiceConfig) Service {
 	return &service{
-		log:      log,
-		userRepo: userRepo,
+		userRepo: c.UserRepo,
 	}
 }
 

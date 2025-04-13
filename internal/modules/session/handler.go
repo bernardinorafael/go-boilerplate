@@ -5,8 +5,8 @@ import (
 	"sync"
 
 	"github.com/bernardinorafael/go-boilerplate/internal/infra/http/middleware"
+	"github.com/bernardinorafael/go-boilerplate/internal/infra/http/token"
 	"github.com/bernardinorafael/go-boilerplate/pkg/fault"
-	"github.com/bernardinorafael/go-boilerplate/pkg/token"
 	httputil "github.com/bernardinorafael/gogem/pkg/httputil"
 	"github.com/go-chi/chi"
 )

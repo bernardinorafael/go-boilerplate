@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/bernardinorafael/go-boilerplate/internal/infra/http/token"
 	"github.com/bernardinorafael/go-boilerplate/pkg/fault"
-	"github.com/bernardinorafael/go-boilerplate/pkg/token"
 )
 
 type AuthKey struct{}

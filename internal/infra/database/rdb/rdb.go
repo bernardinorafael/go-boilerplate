@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/bernardinorafael/go-boilerplate/pkg/config"
+	"github.com/bernardinorafael/go-boilerplate/internal/config"
 	"github.com/bernardinorafael/go-boilerplate/pkg/fault"
 	"github.com/redis/go-redis/v9"
 )
