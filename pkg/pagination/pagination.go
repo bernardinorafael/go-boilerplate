@@ -14,8 +14,8 @@ type Metadata struct {
 }
 
 type Paginated[T any] struct {
-	Data []T      `json:"data"`
 	Meta Metadata `json:"meta"`
+	Data []T      `json:"data"`
 }
 
 func New[T any](data []T, totalItems, currentPage, itemsPerPage int) Paginated[T] {

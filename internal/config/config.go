@@ -16,7 +16,7 @@ type Config struct {
 	Port        string `mapstructure:"PORT"`
 	Environment string `mapstructure:"ENVIRONMENT"`
 	AppName     string `mapstructure:"APP_NAME"`
-	DebugMode   bool   `mapstructure:"DEBUG"`
+	Debug       bool   `mapstructure:"DEBUG"`
 
 	PostgresDSN string `mapstructure:"DB_POSTGRES_DSN"`
 	ResendKey   string `mapstructure:"RESEND_API_KEY"`

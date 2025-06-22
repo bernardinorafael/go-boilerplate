@@ -7,23 +7,24 @@ import (
 type Tag string
 
 const (
-	UNTAGGED              Tag = "UNTAGGED"
-	BAD_REQUEST           Tag = "BAD_REQUEST_ERROR"
-	NOT_FOUND             Tag = "NOT_FOUND_ERROR"
-	INTERNAL_SERVER_ERROR Tag = "INTERNAL_SERVER_ERROR"
-	UNAUTHORIZED          Tag = "UNAUTHORIZED_ERROR"
-	FORBIDDEN             Tag = "FORBIDDEN_ERROR"
-	CONFLICT              Tag = "CONFLICT_ERROR"
-	TOO_MANY_REQUESTS     Tag = "TOO_MANY_REQUESTS_ERROR"
-	UNPROCESSABLE_ENTITY  Tag = "UNPROCESSABLE_ENTITY_ERROR"
-	LOCKED_USER           Tag = "LOCKED_USER_ERROR"
-	DISABLED_USER         Tag = "DISABLED_USER_ERROR"
-	DB_RESOURCE_NOT_FOUND Tag = "DB_RESOURCE_NOT_FOUND_ERROR"
-	INVALID_ENTITY        Tag = "INVALID_ENTITY_ERROR"
-	MAILER_ERROR          Tag = "MAILER_ERROR"
-	EXPIRED               Tag = "EXPIRED_ERROR"
-	CACHE_MISS            Tag = "CACHE_MISS_KEY_ERROR"
-	DB_TRANSACTION        Tag = "DB_TRANSACTION_ERROR"
+	Untagged            Tag = "untagged"
+	BadRequest          Tag = "bad_request_error"
+	NotFound            Tag = "not_found_error"
+	InternalServerError Tag = "internal_server_error"
+	Unauthorized        Tag = "unauthorized_error"
+	Forbidden           Tag = "forbidden_error"
+	Conflict            Tag = "conflict_error"
+	TooManyRequests     Tag = "too_many_requests_error"
+	ValidationError     Tag = "validation_error"
+	UnprocessableEntity Tag = "unprocessable_entity_error"
+	LockedUser          Tag = "locked_user_error"
+	DisabledUser        Tag = "disabled_user_error"
+	DBResourceNotFound  Tag = "db_resource_not_found_error"
+	InvalidEntity       Tag = "invalid_entity_error"
+	MailerError         Tag = "mailer_error"
+	Expired             Tag = "expired_error"
+	CacheMiss           Tag = "cache_miss_key_error"
+	DBTransaction       Tag = "db_transaction_error"
 )
 
 // GetTag returns the first tag of the error
@@ -46,16 +47,17 @@ const (
 //	}
 func GetTag(err error) Tag {
 	if err == nil {
-		return UNTAGGED
+		return Untagged
 	}
 
 	for err != nil {
-		e, ok := err.(*Fault)
-		if ok && e.Tag != "" {
-			return e.Tag
+		var f *Fault
+		ok := errors.As(err, &f)
+		if ok && f.Tag != "" {
+			return f.Tag
 		}
 		err = errors.Unwrap(err)
 	}
 
-	return UNTAGGED
+	return Untagged
 }

@@ -120,7 +120,7 @@ func (c *Cache) get(ctx context.Context, key string) ([]byte, error) {
 		if errors.Is(err, redis.Nil) {
 			return nil, fault.New(
 				"key not found in cache",
-				fault.WithTag(fault.CACHE_MISS),
+				fault.WithTag(fault.CacheMiss),
 				fault.WithError(err),
 			)
 		}

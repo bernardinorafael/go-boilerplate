@@ -6,6 +6,21 @@ APP_NAME=go-boilerplate
 VERSION=1.0.0
 DOCKER_IMAGE=$(APP_NAME):$(VERSION)
 
+.PHONY: compose-up
+compose-up: # Start the Docker containers
+	@echo "=====> Starting Docker containers"
+	@docker compose up -d --remove-orphans
+
+.PHONY: compose-stop
+compose-stop: # Stop the Docker containers
+	@echo "=====> Stopping Docker containers"
+	@docker compose stop
+
+.PHONY: compose-down
+compose-down: # down the Docker containers
+	@echo "=====> Removing Docker containers"
+	@docker compose down
+
 .PHONY: docker-build
 docker-build: # Build the Docker image
 	@echo "=====> Building Docker image"

@@ -1,15 +1,26 @@
 package fault
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
+	"strings"
+	"time"
 )
 
+type FieldError struct {
+	Field   string `json:"field"`
+	Message string `json:"message"`
+}
+
 type Fault struct {
-	HTTPCode int    `json:"-"`
-	Err      error  `json:"-"`
-	Tag      Tag    `json:"tag"`
-	Message  string `json:"message"`
+	Message    string       `json:"message"`
+	Tag        Tag          `json:"tag"`
+	Timestamp  int64        `json:"timestamp"`
+	FieldError []FieldError `json:"fields"`
+
+	HTTPCode int   `json:"-"`
+	Err      error `json:"-"`
 }
 
 // New instantiates a new Fault with the given message
@@ -17,11 +28,15 @@ type Fault struct {
 //
 // The default HTTP code is 400.
 func New(msg string, options ...func(*Fault)) *Fault {
+	var validations = make([]FieldError, 0)
+
 	fault := Fault{
-		HTTPCode: http.StatusBadRequest,
-		Err:      nil,
-		Tag:      UNTAGGED,
-		Message:  msg,
+		Err:        nil,
+		Tag:        Untagged,
+		HTTPCode:   http.StatusBadRequest,
+		Timestamp:  time.Now().Unix(),
+		Message:    msg,
+		FieldError: validations,
 	}
 
 	for _, fn := range options {
@@ -29,6 +44,25 @@ func New(msg string, options ...func(*Fault)) *Fault {
 	}
 
 	return &fault
+}
+
+func WithValidationError(err error) func(*Fault) {
+	var splittedError = strings.Split(err.Error(), ";")
+	var validations = make([]FieldError, len(splittedError))
+
+	for i, validation := range splittedError {
+		field := strings.Split(validation, ":")[0]
+		msg := strings.Split(validation, ":")[1]
+
+		validations[i] = FieldError{
+			Message: strings.TrimSpace(msg),
+			Field:   field,
+		}
+	}
+
+	return func(f *Fault) {
+		f.FieldError = validations
+	}
 }
 
 // WithHTTPCode sets the HTTP code for the fault
@@ -68,8 +102,8 @@ func (f *Fault) Error() string {
 }
 
 func (f *Fault) Is(target error) bool {
-	_, ok := target.(*Fault)
-	return ok
+	var fault *Fault
+	return errors.As(target, &fault)
 }
 
 func (f *Fault) Unwrap() error {

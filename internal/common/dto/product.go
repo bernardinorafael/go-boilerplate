@@ -1,10 +1,22 @@
 package dto
 
-import "time"
+import (
+	"time"
+
+	v "github.com/go-ozzo/ozzo-validation/v4"
+)
 
 type CreateProduct struct {
 	Name  string `json:"name"`
 	Price int64  `json:"price"`
+}
+
+func (p CreateProduct) Validate() error {
+	return v.ValidateStruct(
+		&p,
+		v.Field(&p.Name, v.Required.Error("this field cannot be empty")),
+		v.Field(&p.Price, v.Required.Error("this field cannot be empty or zero")),
+	)
 }
 
 type UpdateProduct struct {

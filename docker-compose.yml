@@ -1,5 +1,5 @@
 services:
-  db:
+  postgresql:
     container_name: go-boilerplate-postgres
     image: bitnami/postgresql:latest
     env_file: ".env"
@@ -30,7 +30,7 @@ services:
     ports:
       - 8080:8080
     environment:
-      DB_HOST: db
+      DB_HOST: postgresql
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
       DB_NAME: ${DB_NAME}
@@ -40,7 +40,7 @@ services:
     networks:
       - go-boilerplate-network
     depends_on:
-      - db
+      - postgresql
 
   prometheus:
     image: prom/prometheus
@@ -79,6 +79,7 @@ services:
 volumes:
   go-boilerplate-volumes:
   prometheus-data:
+
 
 networks:
   go-boilerplate-network:

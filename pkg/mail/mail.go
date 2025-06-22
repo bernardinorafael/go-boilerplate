@@ -56,7 +56,7 @@ func (m *Mail) Send(p SendParams) error {
 		return fault.New(
 			"failed to parse template",
 			fault.WithHTTPCode(http.StatusInternalServerError),
-			fault.WithTag(fault.MAILER_ERROR),
+			fault.WithTag(fault.MailerError),
 			fault.WithError(err),
 		)
 	}
@@ -67,7 +67,7 @@ func (m *Mail) Send(p SendParams) error {
 		return fault.New(
 			"failed to execute template",
 			fault.WithHTTPCode(http.StatusInternalServerError),
-			fault.WithTag(fault.MAILER_ERROR),
+			fault.WithTag(fault.MailerError),
 			fault.WithError(err),
 		)
 	}
@@ -112,7 +112,7 @@ func (m *Mail) send(p *resend.SendEmailRequest, maxRetries int) error {
 	return fault.New(
 		fmt.Sprintf("error on send email after %d attemps", maxRetries),
 		fault.WithHTTPCode(http.StatusInternalServerError),
-		fault.WithTag(fault.MAILER_ERROR),
+		fault.WithTag(fault.MailerError),
 		fault.WithError(mailerErr),
 	)
 }

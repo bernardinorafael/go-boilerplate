@@ -1,15 +1,18 @@
 package product
 
 import (
+	"net/http"
 	"time"
 
 	"github.com/bernardinorafael/go-boilerplate/internal/infra/database/model"
 	"github.com/bernardinorafael/go-boilerplate/pkg/fault"
 	"github.com/bernardinorafael/go-boilerplate/pkg/uid"
+	v "github.com/go-ozzo/ozzo-validation/v4"
 )
 
 const (
 	minNameLength = 3
+	maxNameLength = 100
 	minPrice      = 1
 )
 
@@ -21,7 +24,7 @@ type product struct {
 	updated time.Time
 }
 
-func New(name string, price int64) (*product, error) {
+func NewEntity(name string, price int64) (*product, error) {
 	p := product{
 		id:      uid.New("prod"),
 		name:    name,
@@ -57,17 +60,27 @@ func (p *product) ChangePrice(price int64) {
 	p.updated = time.Now()
 }
 
-func (p *product) validate() error {
-	if p.name == "" {
-		return fault.NewUnprocessableEntity("name is required")
-	}
-
-	if len(p.name) < minNameLength {
-		return fault.NewUnprocessableEntity("name must be at least 3 characters")
-	}
-
-	if p.price < minPrice {
-		return fault.NewUnprocessableEntity("price must be greater than 0")
+func (p product) validate() error {
+	err := v.ValidateStruct(
+		&p,
+		v.Field(
+			&p.name,
+			v.Required.Error("this field is required"),
+			v.Length(minNameLength, maxNameLength).Error("name must be between 3 and 100 characters"),
+		),
+		v.Field(
+			&p.price,
+			v.Required.Error("this field is required"),
+			v.Min(minPrice).Error("price must be greater than 0"),
+		),
+	)
+	if err != nil {
+		return fault.New(
+			"failed to validate product",
+			fault.WithHTTPCode(http.StatusUnprocessableEntity),
+			fault.WithTag(fault.ValidationError),
+			fault.WithValidationError(err),
+		)
 	}
 
 	return nil

@@ -3,14 +3,15 @@ package server
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"time"
 
+	"github.com/charmbracelet/log"
 	"github.com/go-chi/chi"
 )
 
 type Config struct {
+	Log          *log.Logger
 	Port         string
 	IdleTimeout  time.Duration
 	ReadTimeout  time.Duration
@@ -19,6 +20,7 @@ type Config struct {
 }
 
 type Server struct {
+	log    *log.Logger
 	server *http.Server
 	config Config
 }
@@ -33,13 +35,14 @@ func New(c Config) *Server {
 	}
 
 	return &Server{
+		log:    c.Log,
 		server: srv,
 		config: c,
 	}
 }
 
 func (s *Server) Start() error {
-	slog.Info("server started", "port", s.config.Port)
+	s.log.Info("server started", "port", s.config.Port)
 	return s.server.ListenAndServe()
 }
 

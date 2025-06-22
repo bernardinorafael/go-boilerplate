@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/bernardinorafael/go-boilerplate/internal/common/dto"
@@ -39,17 +40,18 @@ func (r *repo) GetAll(ctx context.Context, search dto.SearchParams) ([]model.Pro
 	var products = make([]model.Product, 0)
 	var skip = (search.Page - 1) * search.Limit
 
-	var query = `
-		SELECT p.*
+	var query = fmt.Sprintf(
+		`SELECT p.*
 		FROM products p
 		WHERE (
 			to_tsvector('simple', p.name)
 			@@ websearch_to_tsquery('simple', $1)
 			OR p.name ILIKE '%%' || $1 || '%%'
 		)
-		ORDER BY p.created DESC
-		LIMIT $2 OFFSET $3
-	`
+		ORDER BY p.created %s
+		LIMIT $2 OFFSET $3`,
+		search.Sort,
+	)
 
 	err := r.db.SelectContext(ctx, &products, query, search.Term, search.Limit, skip)
 	if err != nil {

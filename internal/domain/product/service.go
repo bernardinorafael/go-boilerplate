@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
+	"strings"
 	"time"
+
+	"github.com/charmbracelet/log"
 
 	"github.com/bernardinorafael/go-boilerplate/internal/common/dto"
 	"github.com/bernardinorafael/go-boilerplate/pkg/cache"
@@ -19,27 +21,44 @@ import (
 type ServiceConfig struct {
 	ProductRepo Repository
 
+	Log     *log.Logger
 	Metrics *metric.Metric
 	Cache   *cache.Cache
 }
 
 type service struct {
-	productRepo Repository
-	metrics     *metric.Metric
-	cache       *cache.Cache
+	log     *log.Logger
+	repo    Repository
+	metrics *metric.Metric
+	cache   *cache.Cache
 }
 
 func NewService(c ServiceConfig) Service {
 	return &service{
-		productRepo: c.ProductRepo,
-		metrics:     c.Metrics,
-		cache:       c.Cache,
+		log:     c.Log,
+		repo:    c.ProductRepo,
+		metrics: c.Metrics,
+		cache:   c.Cache,
 	}
 }
 
 func (s service) GetProducts(ctx context.Context, search dto.SearchParams) (*pagination.Paginated[dto.ProductResponse], error) {
-	records, totalItems, err := s.productRepo.GetAll(ctx, search)
+	s.log.Debug(
+		"trying to retrieve products with",
+		"details", strings.Join(
+			[]string{
+				fmt.Sprintf("Term: %s", search.Term),
+				fmt.Sprintf("Sort: %s", search.Sort),
+				fmt.Sprintf("Limit: %d", search.Limit),
+				fmt.Sprintf("Page: %d", search.Page),
+			},
+			"\n",
+		),
+	)
+
+	records, totalItems, err := s.repo.GetAll(ctx, search)
 	if err != nil {
+		s.log.Error("failed to retrieve products", "err", err)
 		s.metrics.RecordError("products", "get-all-products")
 		return nil, fault.NewBadRequest("failed to retrieve products")
 	}
@@ -55,57 +74,81 @@ func (s service) GetProducts(ctx context.Context, search dto.SearchParams) (*pag
 		}
 	}
 
-	res := pagination.New(products, totalItems, search.Page, search.Limit)
-	return &res, nil
+	s.log.Debug("products retrieved successfully", "totalItems", totalItems)
+
+	paginatedResponse := pagination.New(products, totalItems, search.Page, search.Limit)
+	return &paginatedResponse, nil
 }
 
 func (s service) CreateProduct(ctx context.Context, input dto.CreateProduct) error {
-	product, err := New(input.Name, input.Price)
+	s.log.Debug(
+		"trying to create product with",
+		"name", input.Name,
+		"price", input.Price,
+	)
+
+	p, err := NewEntity(input.Name, input.Price)
 	if err != nil {
-		slog.Error("error create product entity", "error", err)
+		s.log.Error("failed to create product", "err", err)
 		return err // Error is already handled by the entity
 	}
 
-	err = s.productRepo.Insert(ctx, product.Model())
+	err = s.repo.Insert(ctx, p.Model())
 	if err != nil {
 		var pqErr *pq.Error
 		// 23505 is the code for unique contraint violation
 		if errors.As(err, &pqErr) && pqErr.Code == "23505" {
 			field := dbutil.ExtractFieldFromDetail(pqErr.Detail)
-			return fault.NewConflict(fmt.Sprintf("field: %s already taken", field))
+			return fault.NewConflict(fmt.Sprintf("field %s is already taken", field))
 		}
-
 		s.metrics.RecordError("products", "insert-product")
 		return fault.NewBadRequest("failed to insert product")
 	}
+
+	s.log.Debug(
+		"product created successfully",
+		"details", strings.Join(
+			[]string{
+				fmt.Sprintf("id: %s", p.id),
+				fmt.Sprintf("name: %s", p.name),
+				fmt.Sprintf("price: %d", p.price),
+				fmt.Sprintf("created: %s", p.created.Format(time.DateTime)),
+			},
+			"\n",
+		),
+	)
 
 	return nil
 }
 
 func (s service) GetProductByID(ctx context.Context, productID string) (*dto.ProductResponse, error) {
-	var cachedProduct *dto.ProductResponse
+	s.log.Debug("trying to retrieve product", "id", productID)
 
+	var cachedProduct *dto.ProductResponse
 	err := s.cache.GetStruct(ctx, fmt.Sprintf("prod:%s", productID), &cachedProduct)
 	if err != nil {
 		switch {
-		case fault.GetTag(err) == fault.CACHE_MISS:
-			s.metrics.RecordCacheMiss("product-service")
-			slog.Info("cache:miss product not found")
+		case fault.GetTag(err) == fault.CacheMiss:
+			s.log.Debug("cache miss for product", "id", productID)
+			s.metrics.RecordCacheMiss("product")
 		default:
-			slog.Error("failed to query product from cache")
+			s.log.Error("failed to query product from cache", "err", err)
 		}
 	}
 
 	if cachedProduct != nil {
-		s.metrics.RecordCacheHit("product-service")
+		s.log.Debug("cache hit for product", "id", productID)
+		s.metrics.RecordCacheHit("product")
 		return cachedProduct, nil
 	}
 
-	productRecord, err := s.productRepo.GetByID(ctx, productID)
+	productRecord, err := s.repo.GetByID(ctx, productID)
 	if err != nil {
+		s.log.Error("failed to retrieve product by ID", "err", err)
 		s.metrics.RecordError("products", "get-by-id")
 		return nil, fault.NewBadRequest("failed to retrieve product by ID")
 	} else if productRecord == nil {
+		s.log.Debug("product not found", "id", productID)
 		return nil, fault.NewNotFound("product not found")
 	}
 
@@ -120,32 +163,41 @@ func (s service) GetProductByID(ctx context.Context, productID string) (*dto.Pro
 	cacheKey := fmt.Sprintf("prod:%s", product.ID)
 	err = s.cache.SetStruct(ctx, cacheKey, product, time.Minute*30)
 	if err != nil {
-		slog.Error("failed to caching product")
+		s.log.Error("failed to caching product", "err", err)
+		s.metrics.RecordError("products", "cache-product")
 	}
+	s.log.Debug("product stored in cache", "cacheKey", cacheKey)
 
 	return &product, nil
 }
 
 func (s service) DeleteProduct(ctx context.Context, productID string) error {
-	productRecord, err := s.productRepo.GetByID(ctx, productID)
+	s.log.Debug("trying to delete product", "id", productID)
+
+	productRecord, err := s.repo.GetByID(ctx, productID)
 	if err != nil {
+		s.log.Error("failed to retrieve product by ID", "err", err)
 		s.metrics.RecordError("products", "get-by-id")
 		return fault.NewBadRequest("failed to retrieve product by ID")
 	} else if productRecord == nil {
+		s.log.Debug("product not found", "id", productID)
 		return fault.NewNotFound("product not found")
 	}
 
-	err = s.productRepo.Delete(ctx, productID)
+	err = s.repo.Delete(ctx, productID)
 	if err != nil {
+		s.log.Error("failed to delete product", "err", err)
 		s.metrics.RecordError("products", "delete-product")
 		return fault.NewBadRequest("failed to delete product")
 	}
+
+	s.log.Debug("product deleted successfully", "id", productID)
 
 	return nil
 }
 
 func (s service) UpdateProduct(ctx context.Context, productID string, input dto.UpdateProduct) error {
-	productRecord, err := s.productRepo.GetByID(ctx, productID)
+	productRecord, err := s.repo.GetByID(ctx, productID)
 	if err != nil {
 		s.metrics.RecordError("products", "get-by-id")
 		return fault.NewBadRequest("failed to retrieve product by ID")
@@ -157,7 +209,7 @@ func (s service) UpdateProduct(ctx context.Context, productID string, input dto.
 	p.ChangeName(input.Name)
 	p.ChangePrice(input.Price)
 
-	err = s.productRepo.Update(ctx, p.Model())
+	err = s.repo.Update(ctx, p.Model())
 	if err != nil {
 		s.metrics.RecordError("products", "update-product")
 		return fault.NewBadRequest("failed to update product")

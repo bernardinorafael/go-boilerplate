@@ -56,7 +56,7 @@ func withRateLimit(next http.Handler) http.Handler {
 			fault.NewHTTPError(w, fault.New(
 				"too many requests",
 				fault.WithHTTPCode(http.StatusTooManyRequests),
-				fault.WithTag(fault.TOO_MANY_REQUESTS),
+				fault.WithTag(fault.TooManyRequests),
 			))
 			return
 		}
