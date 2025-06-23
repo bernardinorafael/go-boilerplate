@@ -2,24 +2,32 @@ package dbutil
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
-	"strings"
 
+	"github.com/bernardinorafael/go-boilerplate/pkg/fault"
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 )
 
-func ExtractFieldFromDetail(detail string) string {
-	detail = strings.TrimSpace(detail)
+// VerifyDuplicatedConstraintKey checks if the error is a unique constraint violation
+//
+// It expects the error to be of type *pq.Error and checks for the specific
+// PostgreSQL error code for unique constraint violation (23505)
+func VerifyDuplicatedConstraintKey(target error) error {
+	var pqErr *pq.Error
+	// 23505 is the code for unique contraint violation
+	if errors.As(target, &pqErr) && pqErr.Code == "23505" {
+		// Compile the regular expression to find the pattern "Key (field)="
+		re := regexp.MustCompile(`(?i)Key\s*\(\s*(.*?)\s*\)\s*=`)
+		matches := re.FindStringSubmatch(pqErr.Detail)
+		field := matches[1]
 
-	// Compile the regular expression to find the pattern "Key (field)="
-	re := regexp.MustCompile(`(?i)Key\s*\(\s*(.*?)\s*\)\s*=`)
-	matches := re.FindStringSubmatch(detail)
-
-	if len(matches) > 1 {
-		return matches[1]
+		return fault.NewConflict(fmt.Sprintf("field %s is already taken", field))
 	}
-	return ""
+
+	return nil
 }
 
 func ExecTx(ctx context.Context, db *sqlx.DB, fn func(*sqlx.Tx) error) error {

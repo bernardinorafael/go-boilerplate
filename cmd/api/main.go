@@ -10,6 +10,7 @@ import (
 
 	"github.com/bernardinorafael/go-boilerplate/internal/config"
 	"github.com/bernardinorafael/go-boilerplate/internal/domain/product"
+	"github.com/bernardinorafael/go-boilerplate/internal/domain/user"
 	"github.com/bernardinorafael/go-boilerplate/internal/infra/database/pg"
 	"github.com/bernardinorafael/go-boilerplate/internal/infra/http/middleware"
 	"github.com/bernardinorafael/go-boilerplate/pkg/cache"
@@ -67,7 +68,10 @@ func main() {
 	defer pgconn.Close()
 
 	// Repositories
-	prodRepo := product.NewRepo(pgconn.DB())
+	timeout := time.Second * 2
+
+	prodRepo := product.NewRepo(pgconn.DB(), timeout)
+	userRepo := user.NewRepo(pgconn.DB(), timeout)
 
 	// Services
 	// mailService := mail.New(ctx, mail.Config{
@@ -76,15 +80,30 @@ func main() {
 	// 	Timeout:    time.Second * 5,
 	// 	MaxRetries: 3,
 	// })
-	prodService := product.NewService(product.ServiceConfig{
-		Log:         logger,
-		ProductRepo: prodRepo,
-		Metrics:     metrics,
-		Cache:       cache,
-	})
+	prodService := product.NewService(
+		product.ServiceConfig{
+			Log:         logger,
+			ProductRepo: prodRepo,
+			Metrics:     metrics,
+			Cache:       cache,
+		},
+	)
+	userService := user.NewService(
+		user.ServiceConfig{
+			Log:      logger,
+			UserRepo: userRepo,
+			Metrics:  metrics,
+			Cache:    cache,
+
+			AccessTokenDuration:  env.JWTAccessTokenDuration,
+			RefreshTokenDuration: env.JWTRefreshTokenDuration,
+			SecretKey:            env.JWTSecretKey,
+		},
+	)
 
 	// Handlers
 	product.NewHandler(prodService, env.JWTSecretKey).Register(r)
+	user.NewHandler(userService, env.JWTSecretKey).Register(r)
 
 	srv := server.New(server.Config{
 		Log:          logger,

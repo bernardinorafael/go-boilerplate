@@ -2,7 +2,6 @@ package product
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -15,7 +14,6 @@ import (
 	"github.com/bernardinorafael/go-boilerplate/pkg/fault"
 	"github.com/bernardinorafael/go-boilerplate/pkg/metric"
 	"github.com/bernardinorafael/go-boilerplate/pkg/pagination"
-	"github.com/lib/pq"
 )
 
 type ServiceConfig struct {
@@ -33,7 +31,7 @@ type service struct {
 	cache   *cache.Cache
 }
 
-func NewService(c ServiceConfig) Service {
+func NewService(c ServiceConfig) *service {
 	return &service{
 		log:     c.Log,
 		repo:    c.ProductRepo,
@@ -95,11 +93,10 @@ func (s service) CreateProduct(ctx context.Context, input dto.CreateProduct) err
 
 	err = s.repo.Insert(ctx, p.Model())
 	if err != nil {
-		var pqErr *pq.Error
-		// 23505 is the code for unique contraint violation
-		if errors.As(err, &pqErr) && pqErr.Code == "23505" {
-			field := dbutil.ExtractFieldFromDetail(pqErr.Detail)
-			return fault.NewConflict(fmt.Sprintf("field %s is already taken", field))
+		if err = dbutil.VerifyDuplicatedConstraintKey(err); err != nil {
+			s.log.Error("duplicated product", "name", input.Name)
+			s.metrics.RecordError("user", "product-user")
+			return err // Error is already handled by the helper
 		}
 		s.metrics.RecordError("products", "insert-product")
 		return fault.NewBadRequest("failed to insert product")
@@ -112,7 +109,6 @@ func (s service) CreateProduct(ctx context.Context, input dto.CreateProduct) err
 				fmt.Sprintf("id: %s", p.id),
 				fmt.Sprintf("name: %s", p.name),
 				fmt.Sprintf("price: %d", p.price),
-				fmt.Sprintf("created: %s", p.created.Format(time.DateTime)),
 			},
 			"\n",
 		),

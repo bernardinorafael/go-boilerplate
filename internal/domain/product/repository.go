@@ -14,15 +14,19 @@ import (
 )
 
 type repo struct {
-	db *sqlx.DB
+	db      *sqlx.DB
+	timeout time.Duration
 }
 
-func NewRepo(db *sqlx.DB) Repository {
-	return &repo{db: db}
+func NewRepo(db *sqlx.DB, timeout time.Duration) *repo {
+	return &repo{
+		db:      db,
+		timeout: timeout,
+	}
 }
 
-func (r *repo) Delete(ctx context.Context, productID string) error {
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+func (r repo) Delete(ctx context.Context, productID string) error {
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
 
 	_, err := r.db.ExecContext(ctx, "DELETE FROM products WHERE id = $1", productID)
@@ -33,8 +37,8 @@ func (r *repo) Delete(ctx context.Context, productID string) error {
 	return nil
 }
 
-func (r *repo) GetAll(ctx context.Context, search dto.SearchParams) ([]model.Product, int, error) {
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+func (r repo) GetAll(ctx context.Context, search dto.SearchParams) ([]model.Product, int, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
 
 	var products = make([]model.Product, 0)
@@ -67,8 +71,8 @@ func (r *repo) GetAll(ctx context.Context, search dto.SearchParams) ([]model.Pro
 	return products, count, nil
 }
 
-func (r *repo) GetByID(ctx context.Context, productID string) (*model.Product, error) {
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+func (r repo) GetByID(ctx context.Context, productID string) (*model.Product, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
 
 	var product model.Product
@@ -83,8 +87,8 @@ func (r *repo) GetByID(ctx context.Context, productID string) (*model.Product, e
 	return &product, nil
 }
 
-func (r *repo) GetByName(ctx context.Context, name string) (*model.Product, error) {
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+func (r repo) GetByName(ctx context.Context, name string) (*model.Product, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
 
 	var product model.Product
@@ -99,8 +103,8 @@ func (r *repo) GetByName(ctx context.Context, name string) (*model.Product, erro
 	return &product, nil
 }
 
-func (r *repo) Insert(ctx context.Context, product model.Product) error {
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+func (r repo) Insert(ctx context.Context, product model.Product) error {
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
 
 	var query = `
@@ -127,8 +131,8 @@ func (r *repo) Insert(ctx context.Context, product model.Product) error {
 	return nil
 }
 
-func (r *repo) Update(ctx context.Context, product model.Product) error {
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+func (r repo) Update(ctx context.Context, product model.Product) error {
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
 
 	var query = `
