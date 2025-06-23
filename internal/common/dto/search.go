@@ -17,7 +17,7 @@ func (s SearchParams) Validate() error {
 		v.Field(
 			&s.Sort,
 			v.Required.Error("this param cannot be empty"),
-			v.In("DESC", "ASC").Error("this field must be one of the following values - ASC or DESC"),
+			v.In("asc", "desc").Error("this field must be one of the following values - asc or desc"),
 		),
 		v.Field(
 			&s.Page,

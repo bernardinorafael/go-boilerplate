@@ -94,7 +94,7 @@ func (s service) CreateProduct(ctx context.Context, input dto.CreateProduct) err
 	err = s.repo.Insert(ctx, p.Model())
 	if err != nil {
 		if err = dbutil.VerifyDuplicatedConstraintKey(err); err != nil {
-			s.log.Error("duplicated product", "name", input.Name)
+			s.log.Error("duplicated product", "name", input.Name, "err", err)
 			s.metrics.RecordError("user", "product-user")
 			return err // Error is already handled by the helper
 		}
@@ -185,6 +185,23 @@ func (s service) DeleteProduct(ctx context.Context, productID string) error {
 		s.log.Error("failed to delete product", "err", err)
 		s.metrics.RecordError("products", "delete-product")
 		return fault.NewBadRequest("failed to delete product")
+	}
+
+	cacheKey := fmt.Sprintf("prod:%s", productID)
+
+	existInCache, err := s.cache.Has(ctx, cacheKey)
+	if err != nil {
+		s.log.Error("failed to search for product in cache", "err", err)
+		return fault.NewInternalServerError("failed to search for product")
+	}
+	if existInCache {
+		err := s.cache.Delete(ctx, cacheKey)
+		if err != nil {
+			s.log.Error("failed to delete product from cache", "err", err)
+			return fault.NewInternalServerError("failed to delete product from cache")
+		}
+
+		s.log.Debug("product deleted from cache", "cacheKey", cacheKey)
 	}
 
 	s.log.Debug("product deleted successfully", "id", productID)

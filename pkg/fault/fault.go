@@ -56,7 +56,7 @@ func WithValidationError(err error) func(*Fault) {
 
 		validations[i] = FieldError{
 			Message: strings.TrimSpace(msg),
-			Field:   field,
+			Field:   strings.TrimSpace(field),
 		}
 	}
 
