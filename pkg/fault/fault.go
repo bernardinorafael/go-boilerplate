@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 )
 
 type FieldError struct {
@@ -14,9 +13,8 @@ type FieldError struct {
 }
 
 type Fault struct {
-	Message    string       `json:"message"`
 	Tag        Tag          `json:"tag"`
-	Timestamp  int64        `json:"timestamp"`
+	Message    string       `json:"message"`
 	FieldError []FieldError `json:"fields"`
 
 	HTTPCode int   `json:"-"`
@@ -34,7 +32,6 @@ func New(msg string, options ...func(*Fault)) *Fault {
 		Err:        nil,
 		Tag:        Untagged,
 		HTTPCode:   http.StatusBadRequest,
-		Timestamp:  time.Now().Unix(),
 		Message:    msg,
 		FieldError: validations,
 	}

@@ -3,9 +3,9 @@ package dto
 import "time"
 
 type AuthResponse struct {
-	UserID       string `json:"user_id"`
-	AccessToken  string `jsono:"access_token"`
-	RefreshToken string `json:"refresh_token"`
+	UserID       string `json:"userId"`
+	AccessToken  string `json:"accessToken"`
+	RefreshToken string `json:"refreshToken"`
 }
 
 type UserResponse struct {

@@ -139,11 +139,14 @@ func (h handler) createProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.service.CreateProduct(r.Context(), body)
+	product, err := h.service.CreateProduct(r.Context(), body)
 	if err != nil {
 		fault.NewHTTPError(w, err)
 		return
 	}
 
-	httputil.WriteSuccess(w, http.StatusOK)
+	httputil.WriteJSON(w, http.StatusOK, map[string]any{
+		"id": product.ID,
+	},
+	)
 }

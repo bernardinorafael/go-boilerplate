@@ -18,7 +18,7 @@ type Repository interface {
 }
 
 type Service interface {
-	CreateProduct(ctx context.Context, input dto.CreateProduct) error
+	CreateProduct(ctx context.Context, input dto.CreateProduct) (*dto.ProductResponse, error)
 	UpdateProduct(ctx context.Context, productID string, input dto.UpdateProduct) error
 	GetProducts(ctx context.Context, search dto.SearchParams) (*pagination.Paginated[dto.ProductResponse], error)
 	GetProductByID(ctx context.Context, productID string) (*dto.ProductResponse, error)

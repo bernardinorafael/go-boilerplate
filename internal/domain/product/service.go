@@ -78,7 +78,7 @@ func (s service) GetProducts(ctx context.Context, search dto.SearchParams) (*pag
 	return &paginatedResponse, nil
 }
 
-func (s service) CreateProduct(ctx context.Context, input dto.CreateProduct) error {
+func (s service) CreateProduct(ctx context.Context, input dto.CreateProduct) (*dto.ProductResponse, error) {
 	s.log.Debug(
 		"trying to create product with",
 		"name", input.Name,
@@ -88,7 +88,7 @@ func (s service) CreateProduct(ctx context.Context, input dto.CreateProduct) err
 	p, err := NewEntity(input.Name, input.Price)
 	if err != nil {
 		s.log.Error("failed to create product", "err", err)
-		return err // Error is already handled by the entity
+		return nil, err // Error is already handled by the entity
 	}
 
 	err = s.repo.Insert(ctx, p.Model())
@@ -96,10 +96,10 @@ func (s service) CreateProduct(ctx context.Context, input dto.CreateProduct) err
 		if err = dbutil.VerifyDuplicatedConstraintKey(err); err != nil {
 			s.log.Error("duplicated product", "name", input.Name, "err", err)
 			s.metrics.RecordError("user", "product-user")
-			return err // Error is already handled by the helper
+			return nil, err // Error is already handled by the helper
 		}
 		s.metrics.RecordError("products", "insert-product")
-		return fault.NewBadRequest("failed to insert product")
+		return nil, fault.NewBadRequest("failed to insert product")
 	}
 
 	s.log.Debug(
@@ -114,7 +114,15 @@ func (s service) CreateProduct(ctx context.Context, input dto.CreateProduct) err
 		),
 	)
 
-	return nil
+	res := dto.ProductResponse{
+		ID:      p.id,
+		Name:    p.name,
+		Price:   p.price,
+		Created: p.created,
+		Updated: p.updated,
+	}
+
+	return &res, nil
 }
 
 func (s service) GetProductByID(ctx context.Context, productID string) (*dto.ProductResponse, error) {

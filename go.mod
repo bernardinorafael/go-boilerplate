@@ -20,6 +20,7 @@ require (
 )
 
 require (
+	github.com/Rhymond/go-money v1.0.15 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20200108200545-475eaeb16496 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
