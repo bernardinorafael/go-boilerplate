@@ -40,6 +40,16 @@ psql: # Access the PostgreSQL container
 	@echo "=====> Accessing PostgreSQL container"
 	@docker exec -it ${APP_NAME}-postgres psql -U $(DB_USER) -d $(DB_NAME)
 
+.PHONY: tests
+tests: # Run the Go tests with coverage
+	@echo "=====> Running tests with coverage"
+	go test -v -cover ./...
+
+.PHONY: tidy
+tidy: # Run go mod tidy
+	@echo "=====> Running go mod tidy"
+	go mod tidy
+
 .PHONY: run
 run: # Execute the Go server
 	@go run cmd/api/main.go
