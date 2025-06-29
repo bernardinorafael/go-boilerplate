@@ -19,12 +19,12 @@ const (
 	UnprocessableEntity Tag = "UNPROCESSABLE_ENTITY_ERROR"
 	LockedUser          Tag = "LOCKED_USER_ERROR"
 	DisabledUser        Tag = "DISABLED_USER_ERROR"
-	DBResourceNotFound  Tag = "DB_RESOURCE_NOT_FOUND_ERROR"
 	InvalidEntity       Tag = "INVALID_ENTITY_ERROR"
 	MailerError         Tag = "MAILER_ERROR"
 	Expired             Tag = "EXPIRED_ERROR"
 	CacheMiss           Tag = "CACHE_MISS_KEY_ERROR"
 	DBTransaction       Tag = "DB_TRANSACTION_ERROR"
+	InvalidBody         Tag = "INVALID_REQUEST_BODY"
 )
 
 // GetTag returns the first tag of the error

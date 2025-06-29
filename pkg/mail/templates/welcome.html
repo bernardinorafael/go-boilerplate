@@ -16,7 +16,6 @@
 		title {
 			font-size: 16px;
 			color: #09090B;
-
 		}
 
 		.email-container {
@@ -32,20 +31,6 @@
 			margin-bottom: 12px;
 			margin-top: 12px;
 		}
-
-		.activate-button {
-			line-height: 100%;
-			text-decoration: none;
-			display: block;
-			max-width: 100%;
-			background-color: #007ee9;
-			border-radius: 8px;
-			color: #fff;
-			font-family: 'Open Sans', 'Helvetica Neue', Arial;
-			font-size: 16px;
-			text-align: center;
-			padding: 14px 4px;
-		}
 	</style>
 </head>
 
@@ -59,22 +44,9 @@
 						<tbody>
 							<tr>
 								<td>
-									<p class="title">Hi {{ .Name }},</p>
+									<h2 class="title">Olá {{ .Name }},</h2>
 									<p class="email-content">
-										Thank you for creating an account. Please click the link below to activate your
-										account:
-									</p>
-									<a href="{{ .ActivationLink }}" class="activate-button" target="_blank">
-										<span>Activate Account</span>
-									</a>
-									<p class="email-content">
-										If you did not create this account, please ignore and delete this email.
-									</p>
-									<p class="email-content">
-										To keep your account secure, please do not forward this email to anyone.
-									</p>
-									<p class="email-content">
-										Thank you!
+										Seja bem-vindo(a)! Estamos felizes em tê-lo(a) conosco.
 									</p>
 								</td>
 							</tr>

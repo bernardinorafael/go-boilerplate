@@ -5,6 +5,15 @@ package mail
 //
 //	NotificationSender = "Notification <notification@sender.com>"
 //	SupportSender     = "Support <support@sender.com>"
+
+type EmailSender string
+
 const (
-// Put your senders here
+	NotificationSender EmailSender = "Gulg <notificacao@gulg.io>"
+)
+
+type Template string
+
+const (
+	WelcomeTmpl Template = "welcome.html"
 )

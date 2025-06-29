@@ -45,10 +45,10 @@ func (s service) GetProducts(ctx context.Context, search dto.SearchParams) (*pag
 		"trying to retrieve products with",
 		"details", strings.Join(
 			[]string{
-				fmt.Sprintf("Term: %s", search.Term),
-				fmt.Sprintf("Sort: %s", search.Sort),
-				fmt.Sprintf("Limit: %d", search.Limit),
-				fmt.Sprintf("Page: %d", search.Page),
+				fmt.Sprintf("term: %s", search.Term),
+				fmt.Sprintf("sort: %s", search.Sort),
+				fmt.Sprintf("limit: %d", search.Limit),
+				fmt.Sprintf("page: %d", search.Page),
 			},
 			"\n",
 		),

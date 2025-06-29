@@ -9,11 +9,13 @@ import (
 	"time"
 
 	"github.com/bernardinorafael/go-boilerplate/internal/config"
+	"github.com/bernardinorafael/go-boilerplate/internal/domain/code"
 	"github.com/bernardinorafael/go-boilerplate/internal/domain/product"
 	"github.com/bernardinorafael/go-boilerplate/internal/domain/user"
 	"github.com/bernardinorafael/go-boilerplate/internal/infra/database/pg"
 	"github.com/bernardinorafael/go-boilerplate/internal/infra/http/middleware"
 	"github.com/bernardinorafael/go-boilerplate/pkg/cache"
+	"github.com/bernardinorafael/go-boilerplate/pkg/mail"
 	"github.com/bernardinorafael/go-boilerplate/pkg/metric"
 	"github.com/bernardinorafael/go-boilerplate/pkg/server"
 	"github.com/charmbracelet/log"
@@ -27,15 +29,24 @@ func main() {
 	metrics := metric.New()
 	ctx := context.Background()
 
-	logger := log.NewWithOptions(os.Stdout, log.Options{
-		Prefix:          env.AppName,
-		TimeFormat:      time.Kitchen,
-		ReportTimestamp: true,
-		ReportCaller:    true,
-	})
+	logger := log.NewWithOptions(
+		os.Stdout,
+		log.Options{
+			// Prefix:          env.AppName,
+			TimeFormat:      time.Kitchen,
+			Formatter:       log.JSONFormatter,
+			ReportTimestamp: true,
+		},
+	)
 
 	if env.Debug {
 		logger.SetLevel(log.DebugLevel)
+		logger.SetReportCaller(true)
+	}
+	// in development environment we use TextFormatter
+	// to make it easier to read logs in the console
+	if env.Environment == "development" {
+		logger.SetFormatter(log.TextFormatter)
 	}
 
 	defer func() {
@@ -48,9 +59,7 @@ func main() {
 	}()
 
 	r := chi.NewRouter()
-	middleware.Apply(r, middleware.Config{
-		Metrics: metrics,
-	})
+	middleware.Apply(r, middleware.Config{Metrics: metrics})
 	r.Handle("/metrics", promhttp.HandlerFor(metrics.Registry(), promhttp.HandlerOpts{}))
 
 	cache, err := cache.New(ctx, env.RedisHost, env.RedisPort, env.RedisPassword)
@@ -72,14 +81,19 @@ func main() {
 
 	prodRepo := product.NewRepo(pgconn.DB(), timeout)
 	userRepo := user.NewRepo(pgconn.DB(), timeout)
+	codeRepo := code.NewRepo(pgconn.DB(), timeout)
 
 	// Services
-	// mailService := mail.New(ctx, mail.Config{
-	// 	APIKey:     env.ResendKey,
-	// 	RetryDelay: time.Second * 2,
-	// 	Timeout:    time.Second * 5,
-	// 	MaxRetries: 3,
-	// })
+	mailService := mail.New(ctx, logger, env.ResendKey, time.Second*5)
+	codeService := code.NewService(
+		code.ServiceConfig{
+			Log:      logger,
+			CodeRepo: codeRepo,
+			Metrics:  metrics,
+			Cache:    cache,
+			Mail:     mailService,
+		},
+	)
 	prodService := product.NewService(
 		product.ServiceConfig{
 			Log:         logger,
@@ -90,10 +104,13 @@ func main() {
 	)
 	userService := user.NewService(
 		user.ServiceConfig{
-			Log:      logger,
-			UserRepo: userRepo,
-			Metrics:  metrics,
-			Cache:    cache,
+			Log:     logger,
+			Metrics: metrics,
+			Cache:   cache,
+			Mail:    mailService,
+
+			UserRepo:    userRepo,
+			CodeService: codeService,
 
 			AccessTokenDuration:  env.JWTAccessTokenDuration,
 			RefreshTokenDuration: env.JWTRefreshTokenDuration,

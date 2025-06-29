@@ -5,13 +5,12 @@ import (
 	"context"
 	"embed"
 	"fmt"
-	"log/slog"
-	"net/http"
+	"strings"
 	"time"
 
 	"html/template"
 
-	"github.com/bernardinorafael/go-boilerplate/pkg/fault"
+	"github.com/charmbracelet/log"
 	"github.com/resend/resend-go/v2"
 )
 
@@ -19,31 +18,31 @@ import (
 var templateFS embed.FS
 
 type SendParams struct {
-	From    string
+	From    EmailSender
 	To      string
 	Subject string
-	File    string
+	File    Template
 	Data    any
 }
 
 type Config struct {
-	APIKey     string
-	MaxRetries int
-	RetryDelay time.Duration
-	Timeout    time.Duration
+	APIKey  string
+	Timeout time.Duration
 }
 
 type Mail struct {
-	ctx    context.Context
-	client *resend.Client
-	config Config
+	ctx     context.Context
+	log     *log.Logger
+	client  *resend.Client
+	timeout time.Duration
 }
 
-func New(ctx context.Context, config Config) *Mail {
+func New(ctx context.Context, log *log.Logger, APIKey string, timeout time.Duration) *Mail {
 	return &Mail{
-		ctx:    ctx,
-		client: resend.NewClient(config.APIKey),
-		config: config,
+		ctx:     ctx,
+		log:     log,
+		timeout: timeout,
+		client:  resend.NewClient(APIKey),
 	}
 }
 
@@ -52,67 +51,37 @@ func (m *Mail) Send(p SendParams) error {
 
 	tmpl, err := template.New("email").ParseFS(templateFS, tmplLocation)
 	if err != nil {
-		slog.Error("failed to parse template", "error", err)
-		return fault.New(
-			"failed to parse template",
-			fault.WithHTTPCode(http.StatusInternalServerError),
-			fault.WithTag(fault.MailerError),
-			fault.WithError(err),
-		)
+		return fmt.Errorf("failed to parse template: %w", err)
 	}
 
 	var body bytes.Buffer
 	if err := tmpl.Execute(&body, p.Data); err != nil {
-		slog.Error("failed to execute template", "error", err)
-		return fault.New(
-			"failed to execute template",
-			fault.WithHTTPCode(http.StatusInternalServerError),
-			fault.WithTag(fault.MailerError),
-			fault.WithError(err),
-		)
+		return fmt.Errorf("failed to execute template: %w", err)
 	}
 
 	params := &resend.SendEmailRequest{
-		From:    p.From,
+		From:    string(p.From),
 		To:      []string{p.To},
 		Html:    body.String(),
 		Subject: p.Subject,
 	}
 
-	return m.send(params, m.config.MaxRetries)
-}
-
-func (m *Mail) send(p *resend.SendEmailRequest, maxRetries int) error {
-	var mailerErr error
-
-	for attempt := 1; attempt <= maxRetries; attempt++ {
-		ctx, cancel := context.WithTimeout(m.ctx, m.config.Timeout)
-		defer cancel()
-
-		_, err := m.client.Emails.SendWithContext(ctx, p)
-		if err == nil {
-			slog.Info("email sent",
-				"attempt", attempt,
-				"to", p.To[0],
-			)
-			return nil
-		}
-
-		slog.Error(
-			"error on send email",
-			"error", err,
-			"attempt", attempt,
-			"to", p.To[0],
+	_, err = m.client.Emails.SendWithContext(m.ctx, params)
+	if err == nil {
+		m.log.Debug(
+			"email sent successfully",
+			"details", strings.Join(
+				[]string{
+					fmt.Sprintf("from: %s", p.From),
+					fmt.Sprintf("to: %s", p.To),
+					fmt.Sprintf("subject: %s", p.Subject),
+				},
+				"\n",
+			),
 		)
 
-		mailerErr = err
-		time.Sleep(m.config.RetryDelay)
+		return nil
 	}
 
-	return fault.New(
-		fmt.Sprintf("error on send email after %d attemps", maxRetries),
-		fault.WithHTTPCode(http.StatusInternalServerError),
-		fault.WithTag(fault.MailerError),
-		fault.WithError(mailerErr),
-	)
+	return fmt.Errorf("failed to send email: %w", err)
 }

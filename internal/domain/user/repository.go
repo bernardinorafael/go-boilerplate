@@ -23,6 +23,22 @@ func NewRepo(db *sqlx.DB, timeout time.Duration) *repo {
 	}
 }
 
+func (r repo) GetByEmail(ctx context.Context, email string) (*model.User, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
+	defer cancel()
+
+	var user model.User
+	err := r.db.GetContext(ctx, &user, "SELECT * FROM users WHERE email = $1", email)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fault.New("user not found", fault.WithTag(fault.NotFound))
+		}
+		return nil, fault.New("failed to get user by email", fault.WithError(err))
+	}
+
+	return &user, nil
+}
+
 func (r repo) GetByID(ctx context.Context, id string) (*model.User, error) {
 	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
@@ -31,7 +47,7 @@ func (r repo) GetByID(ctx context.Context, id string) (*model.User, error) {
 	err := r.db.GetContext(ctx, &user, "SELECT * FROM users WHERE id = $1", id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+			return nil, fault.New("user not found", fault.WithTag(fault.NotFound))
 		}
 		return nil, fault.New("failed to get user by id", fault.WithError(err))
 	}

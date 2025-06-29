@@ -30,6 +30,15 @@ func NewHTTPError(w http.ResponseWriter, err error) {
 	)
 }
 
+func NewValidation(message string, err error) *Fault {
+	return New(
+		message,
+		WithHTTPCode(http.StatusUnprocessableEntity),
+		WithTag(ValidationError),
+		WithValidationError(err),
+	)
+}
+
 func NewBadRequest(message string) *Fault {
 	return New(
 		message,

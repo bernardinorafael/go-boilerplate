@@ -132,12 +132,11 @@ func ReadRequestBody(w http.ResponseWriter, r *http.Request, dst any) error {
 			return fmt.Errorf("body contains incorrect JSON type (at character %d)", unmarshalTypeError.Offset)
 		case errors.Is(err, io.EOF):
 			// io.EOF (End of File) indicates that there are no more bytes left to read
-			return errors.New("body cannot be empty")
+			return ErrEmptyRequestBody
 		case errors.As(err, &maxBytesError):
 			return fmt.Errorf("body must not be larger than %d bytes", maxBytesError.Limit)
 		case strings.HasPrefix(err.Error(), "json: unknown field "):
-			fieldName := strings.TrimPrefix(err.Error(), "json: unknown field ")
-			return fmt.Errorf("body contains unknown key %s", fieldName)
+			return ErrUnknownRequestBodyKey
 		case errors.As(err, &invalidUnmarshalError):
 			// Received a non-nil pointer into Decode()
 			panic(err)
