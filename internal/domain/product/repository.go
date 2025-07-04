@@ -79,7 +79,7 @@ func (r repo) GetByID(ctx context.Context, productID string) (*model.Product, er
 	err := r.db.GetContext(ctx, &product, "SELECT * FROM products WHERE id = $1", productID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+			return nil, fault.New("product not found", fault.WithTag(fault.NotFound))
 		}
 		return nil, fault.New("failed to get product by id", fault.WithError(err))
 	}
@@ -95,7 +95,7 @@ func (r repo) GetByName(ctx context.Context, name string) (*model.Product, error
 	err := r.db.GetContext(ctx, &product, "SELECT * FROM products WHERE name = $1", name)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+			return nil, fault.New("product not found", fault.WithTag(fault.NotFound))
 		}
 		return nil, fault.New("failed to get product by name", fault.WithError(err))
 	}

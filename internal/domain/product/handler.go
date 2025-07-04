@@ -98,14 +98,7 @@ func (h handler) getProducts(w http.ResponseWriter, r *http.Request) {
 
 	err := search.Validate()
 	if err != nil {
-		fault.NewHTTPError(
-			w, fault.New(
-				"failed to validate query params",
-				fault.WithTag(fault.ValidationError),
-				fault.WithHTTPCode(http.StatusUnprocessableEntity),
-				fault.WithValidationError(err),
-			),
-		)
+		fault.NewHTTPError(w, fault.NewValidation("failed to validate query params", err))
 		return
 	}
 
@@ -128,14 +121,7 @@ func (h handler) createProduct(w http.ResponseWriter, r *http.Request) {
 
 	err = body.Validate()
 	if err != nil {
-		fault.NewHTTPError(
-			w, fault.New(
-				"failed to validate request body",
-				fault.WithTag(fault.ValidationError),
-				fault.WithHTTPCode(http.StatusUnprocessableEntity),
-				fault.WithValidationError(err),
-			),
-		)
+		fault.NewHTTPError(w, fault.NewValidation("failed to validate request body", err))
 		return
 	}
 
@@ -145,8 +131,5 @@ func (h handler) createProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.WriteJSON(w, http.StatusOK, map[string]any{
-		"id": product.ID,
-	},
-	)
+	httputil.WriteJSON(w, http.StatusOK, map[string]any{"id": product.ID})
 }
