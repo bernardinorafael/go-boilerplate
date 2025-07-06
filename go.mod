@@ -6,7 +6,6 @@ require (
 	github.com/aead/chacha20poly1305 v0.0.0-20201124145622-1a5aba2a8b29
 	github.com/charmbracelet/log v0.4.2
 	github.com/go-chi/chi v1.5.5
-	github.com/go-chi/chi/v5 v5.2.2
 	github.com/go-ozzo/ozzo-validation v3.6.0+incompatible
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/golang-jwt/jwt v3.2.2+incompatible

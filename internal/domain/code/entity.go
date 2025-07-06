@@ -84,11 +84,6 @@ func (c *code) MarkAsUsed() {
 	c.updatedAt = now
 }
 
-func (c code) validate() error {
-	// TODO: do entity validations
-	return nil
-}
-
 func (c *code) Model() model.Code {
 	return model.Code{
 		ID:        c.id,

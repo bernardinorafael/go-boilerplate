@@ -1,8 +1,10 @@
 include .env
 default: run
-# Sets variable for common migration Docker command
-MIGRATE_CMD = docker run -it --rm --network host --volume $(PWD)/internal/infra/database:/db migrate/migrate
 APP_NAME=go-boilerplate
+
+# ==============================================================================
+# Docker Commands
+# ==============================================================================
 VERSION=1.0.0
 DOCKER_IMAGE=$(APP_NAME):$(VERSION)
 
@@ -26,10 +28,30 @@ docker-build: # Build the Docker image
 	@echo "=====> Building Docker image"
 	@docker build --no-cache -t $(DOCKER_IMAGE) .
 
-.PHONY: air
-air: # Access the Air container
-	@docker compose logs -f air
+# ==============================================================================
+# Mocks
+# ==============================================================================
+GO_MODULE_PATH := $(shell go list -m)
 
+.PHONY: mock
+mock:
+	@echo "=====> Generating services mock"
+	@rm -rf __mocks
+	@mkdir -p __mocks
+	@for dir in internal/domain/*/; do \
+		domain=$$(basename $$dir); \
+		echo "Generating mock for $$domain service"; \
+		mockgen -destination=__mocks/domain/$${domain}/service.go -package=$${domain}mock $(GO_MODULE_PATH)/internal/domain/$$domain Service; \
+	done
+
+.PHONY: install-mockgen
+install-mockgen:
+	@echo "=====> Installing mockgen"
+	@go install go.uber.org/mock/mockgen@latest
+
+# ==============================================================================
+# Infra
+# ==============================================================================
 .PHONY: redis
 redis: # Access the Redis container
 	@echo "=====> Accessing Redis container"
@@ -40,8 +62,11 @@ psql: # Access the PostgreSQL container
 	@echo "=====> Accessing PostgreSQL container"
 	@docker exec -it ${APP_NAME}-postgres psql -U $(DB_USER) -d $(DB_NAME)
 
-.PHONY: tests
-tests: # Run the Go tests with coverage
+# ==============================================================================
+# Go
+# ==============================================================================
+.PHONY: test
+test: # Run the Go tests with coverage
 	@echo "=====> Running tests with coverage"
 	go test -v -cover ./...
 
@@ -53,6 +78,11 @@ tidy: # Run go mod tidy
 .PHONY: run
 run: # Execute the Go server
 	@go run cmd/api/main.go
+
+# ==============================================================================
+# Migrations
+# ==============================================================================
+MIGRATE_CMD = docker run -it --rm --network host --volume $(PWD)/internal/infra/database:/db migrate/migrate
 
 .PHONY: migrate
 migrate: # Add a new migration

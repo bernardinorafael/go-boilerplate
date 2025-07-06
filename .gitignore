@@ -16,6 +16,9 @@
 # Coverage
 *.out
 
+# Mocks
+/__mocks/
+
 #db
 db_data/
 
