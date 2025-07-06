@@ -210,12 +210,9 @@ func (s service) DeleteProduct(ctx context.Context, productID string) error {
 			s.log.Error("failed to delete product from cache", "err", err)
 			return fault.NewInternalServerError("failed to delete product from cache")
 		}
-
 		s.log.Debug("product deleted from cache", "cacheKey", cacheKey)
 	}
-
 	s.log.Debug("product deleted successfully", "id", productID)
-
 	return nil
 }
 
