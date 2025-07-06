@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/bernardinorafael/go-boilerplate/internal/common/dto"
+	"github.com/bernardinorafael/go-boilerplate/internal/infra/http/middleware"
 	"github.com/bernardinorafael/go-boilerplate/pkg/fault"
 	"github.com/bernardinorafael/go-boilerplate/pkg/httputil"
 	"github.com/go-chi/chi"
@@ -31,10 +32,10 @@ func NewHandler(service Service, secretKey string) *handler {
 }
 
 func (h handler) Register(r *chi.Mux) {
-	// m := middleware.NewWithAuth(h.secretKey)
+	m := middleware.NewWithAuth(h.secretKey)
 
 	r.Route("/api/v1/products", func(r chi.Router) {
-		// r.Use(m.WithAuth)
+		r.Use(m.WithAuth)
 
 		r.Post("/", h.createProduct)
 		r.Get("/", h.getProducts)
@@ -60,7 +61,7 @@ func (h handler) updateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.WriteSuccess(w, http.StatusOK)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h handler) deleteProduct(w http.ResponseWriter, r *http.Request) {
@@ -72,7 +73,7 @@ func (h handler) deleteProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.WriteSuccess(w, http.StatusOK)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h handler) getProduct(w http.ResponseWriter, r *http.Request) {
@@ -125,11 +126,11 @@ func (h handler) createProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	product, err := h.service.CreateProduct(r.Context(), body)
+	_, err = h.service.CreateProduct(r.Context(), body)
 	if err != nil {
 		fault.NewHTTPError(w, err)
 		return
 	}
 
-	httputil.WriteJSON(w, http.StatusOK, map[string]any{"id": product.ID})
+	w.WriteHeader(http.StatusNoContent)
 }

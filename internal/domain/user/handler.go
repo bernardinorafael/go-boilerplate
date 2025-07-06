@@ -90,7 +90,7 @@ func (h handler) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.WriteSuccess(w, http.StatusCreated)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h handler) getSignedUser(w http.ResponseWriter, r *http.Request) {
@@ -123,5 +123,5 @@ func (h handler) registerUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.WriteSuccess(w, http.StatusCreated)
+	w.WriteHeader(http.StatusNoContent)
 }

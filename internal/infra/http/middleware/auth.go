@@ -25,12 +25,13 @@ func (m *middleware) WithAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		accessToken := r.Header.Get("Authorization")
 
-		if len(accessToken) == 0 {
-			fault.NewHTTPError(w, fault.NewUnauthorized("access token not provided"))
+		t, err := validateAccessToken(accessToken)
+		if err != nil {
+			fault.NewHTTPError(w, err)
 			return
 		}
 
-		claims, err := token.Verify(m.secretKey, accessToken)
+		claims, err := token.Verify(m.secretKey, t)
 		if err != nil {
 			if strings.Contains(err.Error(), "token has expired") {
 				fault.NewHTTPError(w, fault.NewUnauthorized("token has expired"))
@@ -41,7 +42,24 @@ func (m *middleware) WithAuth(next http.Handler) http.Handler {
 		}
 
 		ctx := context.WithValue(r.Context(), AuthKey{}, claims)
-
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+func validateAccessToken(header string) (string, error) {
+	if strings.TrimSpace(header) == "" {
+		return "", fault.NewUnauthorized("missing authentication token")
+	}
+
+	parts := strings.Fields(header)
+
+	if len(parts) != 2 {
+		return "", fault.NewUnauthorized("invalid auth token format")
+	}
+
+	if parts[0] != "Bearer" {
+		return "", fault.NewUnauthorized("invalid auth token format")
+	}
+
+	return parts[1], nil
 }
