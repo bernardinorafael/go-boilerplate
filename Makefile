@@ -40,8 +40,12 @@ mock:
 	@mkdir -p __mocks
 	@for dir in internal/domain/*/; do \
 		domain=$$(basename $$dir); \
-		echo "Generating mock for $$domain service"; \
 		mockgen -destination=__mocks/domain/$${domain}/service.go -package=$${domain}mock $(GO_MODULE_PATH)/internal/domain/$$domain Service; \
+	done
+
+	@for dir in internal/domain/*/; do \
+		domain=$$(basename $$dir); \
+		mockgen -destination=__mocks/domain/$${domain}/repository.go -package=$${domain}mock $(GO_MODULE_PATH)/internal/domain/$$domain Repository; \
 	done
 
 .PHONY: install-mockgen

@@ -8,7 +8,7 @@ import (
 	"github.com/bernardinorafael/go-boilerplate/internal/infra/http/middleware"
 	"github.com/bernardinorafael/go-boilerplate/pkg/fault"
 	"github.com/bernardinorafael/go-boilerplate/pkg/httputil"
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 )
 
 var (

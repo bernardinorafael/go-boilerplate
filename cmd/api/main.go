@@ -19,8 +19,8 @@ import (
 	"github.com/bernardinorafael/go-boilerplate/pkg/metric"
 	"github.com/bernardinorafael/go-boilerplate/pkg/server"
 	"github.com/charmbracelet/log"
+	"github.com/go-chi/chi/v5"
 
-	"github.com/go-chi/chi"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
@@ -58,7 +58,7 @@ func main() {
 		}
 	}()
 
-	r := chi.NewRouter()
+	r := chi.NewMux()
 	middleware.Apply(r, middleware.Config{Metrics: metrics})
 	r.Handle("/metrics", promhttp.HandlerFor(metrics.Registry(), promhttp.HandlerOpts{}))
 

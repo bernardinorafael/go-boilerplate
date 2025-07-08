@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/bernardinorafael/go-boilerplate/pkg/metric"
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
 )
 
@@ -30,7 +30,7 @@ func setup(cfg Config) []middlewareFn {
 }
 
 func Apply(r *chi.Mux, cfg Config) {
-	for _, midleware := range setup(cfg) {
-		r.Use(midleware)
+	for _, m := range setup(cfg) {
+		r.Use(m)
 	}
 }
