@@ -99,3 +99,11 @@ migrate-up: # Apply all pending migrations
 migrate-down: # Revert all applied migrations
 	@echo "=====> Reverting all applied migrations"
 	@$(MIGRATE_CMD) -path=/db/migrations -database "$(DB_URL)" down
+
+migrate-next: # Apply the last pending migration
+	@$(MIGRATE_CMD) -path=/db/migrations -database "$(DB_URL)" up 1
+.PHONY: migrate-next
+
+migrate-prev: # Revert the last applied migration
+	@$(MIGRATE_CMD) -path=/db/migrations -database "$(DB_URL)" down 1
+.PHONY: migrate-prev

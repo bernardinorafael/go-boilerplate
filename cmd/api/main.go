@@ -112,9 +112,8 @@ func main() {
 			UserRepo:    userRepo,
 			CodeService: codeService,
 
-			AccessTokenDuration:  env.JWTAccessTokenDuration,
-			RefreshTokenDuration: env.JWTRefreshTokenDuration,
-			SecretKey:            env.JWTSecretKey,
+			AccessTokenDuration: env.JWTAccessTokenDuration,
+			SecretKey:           env.JWTSecretKey,
 		},
 	)
 
@@ -131,7 +130,7 @@ func main() {
 		Router:       r,
 	})
 
-	shutdoewnErr := srv.GracefulShutdown(ctx, time.Second*30)
+	shutdownErr := srv.GracefulShutdown(ctx, time.Second*30)
 
 	err = srv.Start()
 	if err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -139,7 +138,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = <-shutdoewnErr
+	err = <-shutdownErr
 	if err != nil {
 		logger.Fatal("failed to shutdown server gracefully", "error", err)
 		os.Exit(1)

@@ -22,9 +22,8 @@ type Config struct {
 	PostgresDSN string `mapstructure:"DB_POSTGRES_DSN"`
 	ResendKey   string `mapstructure:"RESEND_API_KEY"`
 
-	JWTSecretKey            string        `mapstructure:"JWT_SECRET"`
-	JWTAccessTokenDuration  time.Duration `mapstructure:"JWT_ACCESS_TOKEN_DURATION"`
-	JWTRefreshTokenDuration time.Duration `mapstructure:"JWT_REFRESH_TOKEN_DURATION"`
+	JWTSecretKey           string        `mapstructure:"JWT_SECRET"`
+	JWTAccessTokenDuration time.Duration `mapstructure:"JWT_ACCESS_TOKEN_DURATION"`
 
 	RedisHost     string `mapstructure:"REDIS_HOST"`
 	RedisPort     string `mapstructure:"REDIS_PORT"`

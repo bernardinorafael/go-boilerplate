@@ -44,7 +44,7 @@ func New(msg string, options ...func(*Fault)) *Fault {
 }
 
 func WithValidationError(err error) func(*Fault) {
-	var splittedError = strings.Split(err.Error(), ";")
+	var splittedError = strings.Split(err.Error(), ",")
 	var validations = make([]FieldError, len(splittedError))
 
 	for i, validation := range splittedError {

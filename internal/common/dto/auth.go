@@ -8,9 +8,8 @@ import (
 )
 
 type AuthResponse struct {
-	UserID       string `json:"userId"`
-	AccessToken  string `json:"accessToken"`
-	RefreshToken string `json:"refreshToken"`
+	UserID      string `json:"userId"`
+	AccessToken string `json:"accessToken"`
 }
 
 type UserResponse struct {

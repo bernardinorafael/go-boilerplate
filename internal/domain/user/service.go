@@ -3,12 +3,12 @@ package user
 import (
 	"context"
 	"fmt"
+	"github.com/bernardinorafael/go-boilerplate/internal/infra/http/middleware"
 	"strings"
 	"time"
 
 	"github.com/bernardinorafael/go-boilerplate/internal/common/dto"
 	"github.com/bernardinorafael/go-boilerplate/internal/domain/code"
-	"github.com/bernardinorafael/go-boilerplate/internal/infra/http/middleware"
 	"github.com/bernardinorafael/go-boilerplate/pkg/cache"
 	"github.com/bernardinorafael/go-boilerplate/pkg/dbutil"
 	"github.com/bernardinorafael/go-boilerplate/pkg/fault"
@@ -27,9 +27,8 @@ type ServiceConfig struct {
 	UserRepo    Repository
 	CodeService code.Service
 
-	AccessTokenDuration  time.Duration
-	RefreshTokenDuration time.Duration
-	SecretKey            string
+	AccessTokenDuration time.Duration
+	SecretKey           string
 }
 
 type service struct {
@@ -41,9 +40,8 @@ type service struct {
 	repo        Repository
 	codeService code.Service
 
-	accessTokenDuration  time.Duration
-	refreshTokenDuration time.Duration
-	secretKey            string
+	accessTokenDuration time.Duration
+	secretKey           string
 }
 
 func NewService(c ServiceConfig) *service {
@@ -56,9 +54,8 @@ func NewService(c ServiceConfig) *service {
 		repo:        c.UserRepo,
 		codeService: c.CodeService,
 
-		accessTokenDuration:  c.AccessTokenDuration,
-		refreshTokenDuration: c.RefreshTokenDuration,
-		secretKey:            c.SecretKey,
+		accessTokenDuration: c.AccessTokenDuration,
+		secretKey:           c.SecretKey,
 	}
 }
 
@@ -91,15 +88,9 @@ func (s service) Verify(ctx context.Context, userID, code string) (*dto.AuthResp
 		return nil, fault.NewBadRequest("failed to generate access token")
 	}
 
-	refreshToken, _, err := token.Gen(s.secretKey, userID, s.refreshTokenDuration)
-	if err != nil {
-		return nil, fault.NewBadRequest("failed to generate refresh token")
-	}
-
 	return &dto.AuthResponse{
-		UserID:       userID,
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
+		UserID:      userID,
+		AccessToken: accessToken,
 	}, nil
 }
 
