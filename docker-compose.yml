@@ -23,58 +23,58 @@ services:
     networks:
       - go-boilerplate-network
 
-  air:
-    container_name: go-boilerplate-air
-    image: cosmtrek/air:latest
-    working_dir: /app
-    ports:
-      - 8080:8080
-    environment:
-      DB_HOST: postgresql
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_NAME: ${DB_NAME}
-      GOTOOLCHAIN: auto
-    volumes:
-      - .:/app
-    networks:
-      - go-boilerplate-network
-    depends_on:
-      - postgresql
-
-  prometheus:
-    image: prom/prometheus
-    container_name: go-boilerplate-prometheus
-    restart: unless-stopped
-    ports:
-      - 9090:9090
-    command:
-      - --config.file=/etc/prometheus/prometheus.yml
-      - --storage.tsdb.path=/prometheus
-      - --web.console.libraries=/etc/prometheus/console_libraries
-      - --web.console.templates=/etc/prometheus/consoles
-      - --web.enable-lifecycle
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus-data:/prometheus
-    networks:
-      - go-boilerplate-network
-
-  grafana:
-    image: grafana/grafana
-    container_name: go-boilerplate-grafana
-    restart: unless-stopped
-    environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=grafana
-    ports:
-      - 3000:3000
-    volumes:
-      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
-    depends_on:
-      - prometheus
-    networks:
-      - go-boilerplate-network
+#  air:
+#    container_name: go-boilerplate-air
+#    image: cosmtrek/air:latest
+#    working_dir: /app
+#    ports:
+#      - 8080:8080
+#    environment:
+#      DB_HOST: postgresql
+#      DB_USER: ${DB_USER}
+#      DB_PASSWORD: ${DB_PASSWORD}
+#      DB_NAME: ${DB_NAME}
+#      GOTOOLCHAIN: auto
+#    volumes:
+#      - .:/app
+#    networks:
+#      - go-boilerplate-network
+#    depends_on:
+#      - postgresql
+#
+#  prometheus:
+#    image: prom/prometheus
+#    container_name: go-boilerplate-prometheus
+#    restart: unless-stopped
+#    ports:
+#      - 9090:9090
+#    command:
+#      - --config.file=/etc/prometheus/prometheus.yml
+#      - --storage.tsdb.path=/prometheus
+#      - --web.console.libraries=/etc/prometheus/console_libraries
+#      - --web.console.templates=/etc/prometheus/consoles
+#      - --web.enable-lifecycle
+#    volumes:
+#      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+#      - prometheus-data:/prometheus
+#    networks:
+#      - go-boilerplate-network
+#
+#  grafana:
+#    image: grafana/grafana
+#    container_name: go-boilerplate-grafana
+#    restart: unless-stopped
+#    environment:
+#      - GF_SECURITY_ADMIN_USER=admin
+#      - GF_SECURITY_ADMIN_PASSWORD=grafana
+#    ports:
+#      - 3000:3000
+#    volumes:
+#      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+#    depends_on:
+#      - prometheus
+#    networks:
+#      - go-boilerplate-network
 
 volumes:
   go-boilerplate-volumes:
