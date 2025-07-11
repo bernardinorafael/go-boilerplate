@@ -35,3 +35,6 @@ __temp/
 
 #aws
 .aws/credentials
+
+#cursor
+.cursor

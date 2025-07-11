@@ -44,17 +44,40 @@ func New(msg string, options ...func(*Fault)) *Fault {
 }
 
 func WithValidationError(err error) func(*Fault) {
-	var splittedError = strings.Split(err.Error(), ",")
-	var validations = make([]FieldError, len(splittedError))
+	if err == nil {
+		return func(f *Fault) {}
+	}
 
-	for i, validation := range splittedError {
-		field := strings.Split(validation, ":")[0]
-		msg := strings.Split(validation, ":")[1]
+	var validations []FieldError
+	splittedError := strings.Split(err.Error(), ",")
 
-		validations[i] = FieldError{
-			Message: strings.TrimSpace(msg),
-			Field:   strings.TrimSpace(field),
+	for _, validation := range splittedError {
+		validation = strings.TrimSpace(validation)
+		if validation == "" {
+			continue
 		}
+
+		parts := strings.SplitN(validation, ":", 2)
+		if len(parts) != 2 {
+			validations = append(validations, FieldError{
+				Field:   "general",
+				Message: validation,
+			})
+			continue
+		}
+
+		field := strings.TrimSpace(parts[0])
+		msg := strings.TrimSpace(parts[1])
+
+		// If the field or message is empty, skip it
+		if field == "" || msg == "" {
+			continue
+		}
+
+		validations = append(validations, FieldError{
+			Field:   field,
+			Message: msg,
+		})
 	}
 
 	return func(f *Fault) {
@@ -83,6 +106,13 @@ func WithError(err error) func(*Fault) {
 func WithTag(tag Tag) func(*Fault) {
 	return func(f *Fault) {
 		f.Tag = tag
+	}
+}
+
+// WithFieldError sets the field errors for the fault
+func WithFieldError(args ...FieldError) func(*Fault) {
+	return func(f *Fault) {
+		f.FieldError = args
 	}
 }
 

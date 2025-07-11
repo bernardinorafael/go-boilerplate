@@ -29,3 +29,13 @@ type Code struct {
 	CreatedAt time.Time  `db:"created_at"`
 	UpdatedAt time.Time  `db:"updated_at"`
 }
+
+type Category struct {
+	ID        string     `db:"id"`
+	Name      string     `db:"name"`
+	Slug      string     `db:"slug"`
+	Active    bool       `db:"active"`
+	CreatedAt time.Time  `db:"created_at"`
+	UpdatedAt time.Time  `db:"updated_at"`
+	DeletedAt *time.Time `db:"deleted_at"`
+}
