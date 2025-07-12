@@ -30,9 +30,10 @@ type Container struct {
 	CodeRepo     code.Repository
 	CategoryRepo category.Repository
 
-	ProductService product.Service
-	UserService    user.Service
-	CodeService    code.Service
+	ProductService  product.Service
+	UserService     user.Service
+	CodeService     code.Service
+	CategoryService category.Service
 }
 
 // NewContainer creates a new container instance.
@@ -92,6 +93,11 @@ func (c *Container) initRepositories() {
 }
 
 func (c *Container) initServices() {
+	c.CategoryService = category.NewService(category.ServiceConfig{
+		Log:          c.Logger,
+		CategoryRepo: c.CategoryRepo,
+	})
+
 	c.CodeService = code.NewService(code.ServiceConfig{
 		Log:      c.Logger,
 		CodeRepo: c.CodeRepo,

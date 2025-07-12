@@ -22,7 +22,6 @@ import (
 func main() {
 	env := config.GetConfig()
 	ctx := context.Background()
-
 	logger := logger.NewLogger(env)
 
 	defer func() {

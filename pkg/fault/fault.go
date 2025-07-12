@@ -49,9 +49,9 @@ func WithValidationError(err error) func(*Fault) {
 	}
 
 	var validations []FieldError
-	splittedError := strings.Split(err.Error(), ",")
+	splittedError := strings.SplitSeq(err.Error(), ";")
 
-	for _, validation := range splittedError {
+	for validation := range splittedError {
 		validation = strings.TrimSpace(validation)
 		if validation == "" {
 			continue

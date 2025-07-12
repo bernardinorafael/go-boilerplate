@@ -4,8 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
+	"github.com/bernardinorafael/go-boilerplate/internal/common/dto"
 	"github.com/bernardinorafael/go-boilerplate/internal/infra/database/model"
 	"github.com/bernardinorafael/go-boilerplate/pkg/fault"
 	"github.com/jmoiron/sqlx"
@@ -21,6 +23,41 @@ func NewRepo(db *sqlx.DB, timeout time.Duration) *repo {
 		db:      db,
 		timeout: timeout,
 	}
+}
+
+func (r repo) FindAll(ctx context.Context, search dto.SearchParams) ([]model.Category, int, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
+	defer cancel()
+
+	var categories = make([]model.Category, 0)
+	var skip = (search.Page - 1) * search.Limit
+
+	var query = fmt.Sprintf(
+		`SELECT c.*
+		FROM categories c
+		WHERE (
+			to_tsvector('simple', c.name)
+			@@ websearch_to_tsquery('simple', $1)
+			OR c.name ILIKE '%%' || $1 || '%%'
+		)
+		AND c.deleted_at IS NULL
+		ORDER BY c.created_at %s
+		LIMIT $2 OFFSET $3`,
+		search.Sort,
+	)
+
+	err := r.db.SelectContext(ctx, &categories, query, search.Term, search.Limit, skip)
+	if err != nil {
+		return nil, -1, fault.New("failed to get categories", fault.WithError(err))
+	}
+
+	var count int
+	err = r.db.GetContext(ctx, &count, "SELECT COUNT(*) FROM categories")
+	if err != nil {
+		return nil, -1, fault.New("failed to count categories", fault.WithError(err))
+	}
+
+	return categories, count, nil
 }
 
 func (r repo) Insert(ctx context.Context, category model.Category) error {
@@ -63,7 +100,8 @@ func (r repo) Update(ctx context.Context, category model.Category) error {
 			name = :name,
 			slug = :slug,
 			active = :active,
-			updated_at = :updated_at
+			updated_at = :updated_at,
+			deleted_at = :deleted_at
 		WHERE id = :id
 	`
 
@@ -75,15 +113,29 @@ func (r repo) Update(ctx context.Context, category model.Category) error {
 	return nil
 }
 
+func (r repo) FindByName(ctx context.Context, name string) (*model.Category, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
+	defer cancel()
+
+	var query = `SELECT * FROM categories WHERE name = $1`
+
+	var category model.Category
+	err := r.db.GetContext(ctx, &category, query, name)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fault.New("category not found", fault.WithTag(fault.NotFound))
+		}
+		return nil, fault.New("failed to get category by id", fault.WithError(err))
+	}
+
+	return &category, nil
+}
+
 func (r repo) FindByID(ctx context.Context, categoryID string) (*model.Category, error) {
 	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
 
-	var query = `
-		SELECT * FROM categories
-		WHERE id = :id
-		AND deleted_at IS NULL
-	`
+	var query = `SELECT * FROM categories WHERE id = $1`
 
 	var category model.Category
 	err := r.db.GetContext(ctx, &category, query, categoryID)

@@ -85,13 +85,13 @@ func (s service) CreateProduct(ctx context.Context, input dto.CreateProduct) (*d
 		"price", input.Price,
 	)
 
-	p, err := NewEntity(input.Name, input.Price)
+	entity, err := NewEntity(input.Name, input.Price)
 	if err != nil {
 		s.log.Error("failed to create product", "err", err)
 		return nil, err // Error is already handled by the entity
 	}
 
-	err = s.repo.Insert(ctx, p.Model())
+	err = s.repo.Insert(ctx, entity.Model())
 	if err != nil {
 		if err = dbutil.VerifyDuplicatedConstraintKey(err); err != nil {
 			s.log.Error("duplicated product", "name", input.Name, "err", err)
@@ -106,20 +106,20 @@ func (s service) CreateProduct(ctx context.Context, input dto.CreateProduct) (*d
 		"product created successfully",
 		"details", strings.Join(
 			[]string{
-				fmt.Sprintf("id: %s", p.id),
-				fmt.Sprintf("name: %s", p.name),
-				fmt.Sprintf("price: %d", p.price),
+				fmt.Sprintf("id: %s", entity.id),
+				fmt.Sprintf("name: %s", entity.name),
+				fmt.Sprintf("price: %d", entity.price),
 			},
 			"\n",
 		),
 	)
 
 	res := dto.ProductResponse{
-		ID:      p.id,
-		Name:    p.name,
-		Price:   p.price,
-		Created: p.created,
-		Updated: p.updated,
+		ID:      entity.id,
+		Name:    entity.name,
+		Price:   entity.price,
+		Created: entity.created,
+		Updated: entity.updated,
 	}
 
 	return &res, nil

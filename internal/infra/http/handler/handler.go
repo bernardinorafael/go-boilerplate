@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"github.com/bernardinorafael/go-boilerplate/internal/domain/category"
 	"github.com/bernardinorafael/go-boilerplate/internal/domain/product"
 	"github.com/bernardinorafael/go-boilerplate/internal/domain/user"
 	"github.com/bernardinorafael/go-boilerplate/internal/infra/container"
@@ -10,4 +11,5 @@ import (
 func RegisterHandler(r *chi.Mux, c *container.Container) {
 	product.NewHandler(c.ProductService, c.Config.JWTSecretKey).Register(r)
 	user.NewHandler(c.UserService, c.Config.JWTSecretKey).Register(r)
+	category.NewHandler(c.CategoryService, c.Config.JWTSecretKey).Register(r)
 }

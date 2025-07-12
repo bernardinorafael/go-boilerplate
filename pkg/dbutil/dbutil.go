@@ -24,7 +24,7 @@ func VerifyDuplicatedConstraintKey(target error) error {
 		matches := re.FindStringSubmatch(pqErr.Detail)
 		field := matches[1]
 
-		return fault.NewConflict(fmt.Sprintf("%s is already taken", field))
+		return fault.NewConflict(fmt.Sprintf("%s already registered", field))
 	}
 
 	return nil
