@@ -18,6 +18,7 @@ require (
 	github.com/resend/resend-go/v2 v2.21.0
 	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.10.0
+	go.uber.org/mock v0.5.2
 	golang.org/x/crypto v0.39.0
 	golang.org/x/time v0.12.0
 )
@@ -46,7 +47,6 @@ require (
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
-	go.uber.org/mock v0.5.2 // indirect
 	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b // indirect
 	google.golang.org/protobuf v1.36.5 // indirect
 )
