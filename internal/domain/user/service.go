@@ -3,9 +3,10 @@ package user
 import (
 	"context"
 	"fmt"
-	"github.com/bernardinorafael/go-boilerplate/internal/infra/http/middleware"
 	"strings"
 	"time"
+
+	"github.com/bernardinorafael/go-boilerplate/internal/infra/http/middleware"
 
 	"github.com/bernardinorafael/go-boilerplate/internal/common/dto"
 	"github.com/bernardinorafael/go-boilerplate/internal/domain/code"
@@ -17,19 +18,6 @@ import (
 	"github.com/bernardinorafael/go-boilerplate/pkg/token"
 	"github.com/charmbracelet/log"
 )
-
-type ServiceConfig struct {
-	Log     *log.Logger
-	Metrics *metric.Metric
-	Cache   *cache.Cache
-	Mail    *mail.Mail
-
-	UserRepo    Repository
-	CodeService code.Service
-
-	AccessTokenDuration time.Duration
-	SecretKey           string
-}
 
 type service struct {
 	log     *log.Logger
@@ -44,18 +32,27 @@ type service struct {
 	secretKey           string
 }
 
-func NewService(c ServiceConfig) *service {
+func NewService(
+	log *log.Logger,
+	repo Repository,
+	metrics *metric.Metric,
+	cache *cache.Cache,
+	mail *mail.Mail,
+	codeService code.Service,
+	accessTokenDuration time.Duration,
+	secretKey string,
+) *service {
 	return &service{
-		log:     c.Log,
-		metrics: c.Metrics,
-		cache:   c.Cache,
-		mail:    c.Mail,
+		log:     log,
+		metrics: metrics,
+		cache:   cache,
+		mail:    mail,
 
-		repo:        c.UserRepo,
-		codeService: c.CodeService,
+		repo:        repo,
+		codeService: codeService,
 
-		accessTokenDuration: c.AccessTokenDuration,
-		secretKey:           c.SecretKey,
+		accessTokenDuration: accessTokenDuration,
+		secretKey:           secretKey,
 	}
 }
 

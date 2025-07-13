@@ -36,15 +36,19 @@ type Container struct {
 	CategoryService category.Service
 }
 
-// NewContainer creates a new container instance.
+// New creates a new container instance.
 //
-// It initializes the infrastructure, repositories, and services.
+// The Container is the infrastructure centralizer of the application, responsible for:
+// - Managing all infrastructure connections (database, cache, email)
+// - Initializing and configuring repositories and services
+// - Providing centralized access to all application dependencies
+// - Ensuring that all dependencies are properly initialized
 //
 // Parameters:
 //   - ctx: The context for the container.
 //   - cfg: The configuration for the container.
 //   - logger: The logger for the container.
-func NewContainer(ctx context.Context, cfg *config.Config, logger *log.Logger) (*Container, error) {
+func New(ctx context.Context, cfg *config.Config, logger *log.Logger) (*Container, error) {
 	container := &Container{
 		Config:  cfg,
 		Logger:  logger,
@@ -93,38 +97,19 @@ func (c *Container) initRepositories() {
 }
 
 func (c *Container) initServices() {
-	c.CategoryService = category.NewService(category.ServiceConfig{
-		Log:          c.Logger,
-		CategoryRepo: c.CategoryRepo,
-	})
-
-	c.CodeService = code.NewService(code.ServiceConfig{
-		Log:      c.Logger,
-		CodeRepo: c.CodeRepo,
-		Metrics:  c.Metrics,
-		Cache:    c.Cache,
-		Mail:     c.Mail,
-	})
-
-	c.ProductService = product.NewService(product.ServiceConfig{
-		Log:         c.Logger,
-		ProductRepo: c.ProductRepo,
-		Metrics:     c.Metrics,
-		Cache:       c.Cache,
-	})
-
-	c.UserService = user.NewService(user.ServiceConfig{
-		Log:     c.Logger,
-		Metrics: c.Metrics,
-		Cache:   c.Cache,
-		Mail:    c.Mail,
-
-		UserRepo:    c.UserRepo,
-		CodeService: c.CodeService,
-
-		AccessTokenDuration: c.Config.JWTAccessTokenDuration,
-		SecretKey:           c.Config.JWTSecretKey,
-	})
+	c.CategoryService = category.NewService(c.Logger, c.CategoryRepo)
+	c.CodeService = code.NewService(c.Logger, c.CodeRepo, c.Metrics, c.Cache, c.Mail)
+	c.ProductService = product.NewService(c.Logger, c.ProductRepo, c.Metrics, c.Cache)
+	c.UserService = user.NewService(
+		c.Logger,
+		c.UserRepo,
+		c.Metrics,
+		c.Cache,
+		c.Mail,
+		c.CodeService,
+		c.Config.JWTAccessTokenDuration,
+		c.Config.JWTSecretKey,
+	)
 }
 
 func (c *Container) Close() error {

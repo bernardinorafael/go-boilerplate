@@ -16,20 +16,15 @@ import (
 	"github.com/charmbracelet/log"
 )
 
-type ServiceConfig struct {
-	Log          *log.Logger
-	CategoryRepo Repository
-}
-
 type service struct {
 	log  *log.Logger
 	repo Repository
 }
 
-func NewService(c ServiceConfig) *service {
+func NewService(log *log.Logger, repo Repository) *service {
 	return &service{
-		log:  c.Log,
-		repo: c.CategoryRepo,
+		log:  log,
+		repo: repo,
 	}
 }
 

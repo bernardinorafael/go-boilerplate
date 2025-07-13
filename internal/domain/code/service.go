@@ -10,14 +10,6 @@ import (
 	"github.com/charmbracelet/log"
 )
 
-type ServiceConfig struct {
-	CodeRepo Repository
-	Log      *log.Logger
-	Metrics  *metric.Metric
-	Cache    *cache.Cache
-	Mail     *mail.Mail
-}
-
 type service struct {
 	log     *log.Logger
 	metrics *metric.Metric
@@ -26,13 +18,19 @@ type service struct {
 	repo    Repository
 }
 
-func NewService(c ServiceConfig) *service {
+func NewService(
+	log *log.Logger,
+	repo Repository,
+	metrics *metric.Metric,
+	cache *cache.Cache,
+	mail *mail.Mail,
+) *service {
 	return &service{
-		log:     c.Log,
-		repo:    c.CodeRepo,
-		metrics: c.Metrics,
-		cache:   c.Cache,
-		mail:    c.Mail,
+		log:     log,
+		metrics: metrics,
+		cache:   cache,
+		mail:    mail,
+		repo:    repo,
 	}
 }
 

@@ -33,7 +33,7 @@ func main() {
 		}
 	}()
 
-	container, err := container.NewContainer(ctx, env, logger)
+	container, err := container.New(ctx, env, logger)
 	if err != nil {
 		logger.Fatal("failed to initialize container", "error", err)
 		os.Exit(1)

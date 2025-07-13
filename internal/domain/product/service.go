@@ -16,14 +16,6 @@ import (
 	"github.com/bernardinorafael/go-boilerplate/pkg/pagination"
 )
 
-type ServiceConfig struct {
-	ProductRepo Repository
-
-	Log     *log.Logger
-	Metrics *metric.Metric
-	Cache   *cache.Cache
-}
-
 type service struct {
 	log     *log.Logger
 	repo    Repository
@@ -31,12 +23,17 @@ type service struct {
 	cache   *cache.Cache
 }
 
-func NewService(c ServiceConfig) *service {
+func NewService(
+	log *log.Logger,
+	repo Repository,
+	metrics *metric.Metric,
+	cache *cache.Cache,
+) *service {
 	return &service{
-		log:     c.Log,
-		repo:    c.ProductRepo,
-		metrics: c.Metrics,
-		cache:   c.Cache,
+		log:     log,
+		repo:    repo,
+		metrics: metrics,
+		cache:   cache,
 	}
 }
 
