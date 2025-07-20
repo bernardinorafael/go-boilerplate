@@ -1,1 +1,1 @@
-DROP TABLE IF EXISTS "products";
+drop table if exists "products";

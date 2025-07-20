@@ -33,16 +33,16 @@ func (r repo) FindAll(ctx context.Context, search dto.SearchParams) ([]model.Cat
 	var skip = (search.Page - 1) * search.Limit
 
 	var query = fmt.Sprintf(
-		`SELECT c.*
-		FROM categories c
-		WHERE (
+		`select c.*
+		from categories c
+		where (
 			to_tsvector('simple', c.name)
 			@@ websearch_to_tsquery('simple', $1)
-			OR c.name ILIKE '%%' || $1 || '%%'
+			or c.name ilike '%%' || $1 || '%%'
 		)
-		AND c.deleted_at IS NULL
-		ORDER BY c.created_at %s
-		LIMIT $2 OFFSET $3`,
+		and c.deleted_at is null
+		order by c.created_at %s
+		limit $2 offset $3`,
 		search.Sort,
 	)
 
@@ -65,14 +65,14 @@ func (r repo) Insert(ctx context.Context, category model.Category) error {
 	defer cancel()
 
 	var query = `
-		INSERT INTO categories (
+		insert into categories (
 			id,
 			name,
 			slug,
 			active,
 			created_at,
 			updated_at
-		) VALUES (
+		) values (
 			:id,
 			:name,
 			:slug,
@@ -95,14 +95,14 @@ func (r repo) Update(ctx context.Context, category model.Category) error {
 	defer cancel()
 
 	var query = `
-		UPDATE categories
-		SET
+		update categories
+		set
 			name = :name,
 			slug = :slug,
 			active = :active,
 			updated_at = :updated_at,
 			deleted_at = :deleted_at
-		WHERE id = :id
+		where id = :id
 	`
 
 	_, err := r.db.NamedExecContext(ctx, query, category)
@@ -117,7 +117,7 @@ func (r repo) FindByName(ctx context.Context, name string) (*model.Category, err
 	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
 
-	var query = `SELECT * FROM categories WHERE name = $1`
+	var query = `select * from categories where name = $1`
 
 	var category model.Category
 	err := r.db.GetContext(ctx, &category, query, name)
@@ -135,7 +135,7 @@ func (r repo) FindByID(ctx context.Context, categoryID string) (*model.Category,
 	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
 
-	var query = `SELECT * FROM categories WHERE id = $1`
+	var query = `select * from categories where id = $1`
 
 	var category model.Category
 	err := r.db.GetContext(ctx, &category, query, categoryID)

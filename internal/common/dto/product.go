@@ -31,3 +31,16 @@ type ProductResponse struct {
 	Created time.Time `json:"created"`
 	Updated time.Time `json:"updated"`
 }
+
+type CreateProductCategory struct {
+	ProductID  string `json:"product_id"`
+	CategoryID string `json:"category_id"`
+}
+
+func (p CreateProductCategory) Validate() error {
+	return v.ValidateStruct(
+		&p,
+		v.Field(&p.CategoryID, v.Required.Error("this field cannot be empty")),
+		v.Field(&p.ProductID, v.Required.Error("this field cannot be empty")),
+	)
+}

@@ -43,6 +43,34 @@ func (h handler) Register(r *chi.Mux) {
 		r.Delete("/{productId}", h.deleteProduct)
 		r.Patch("/{productId}", h.updateProduct)
 	})
+
+	r.Route("/api/v1/products-category", func(r chi.Router) {
+		r.Use(m.WithAuth)
+
+		r.Post("/", h.addProductCategory)
+	})
+}
+
+func (h handler) addProductCategory(w http.ResponseWriter, r *http.Request) {
+	var body dto.CreateProductCategory
+	err := httputil.ReadRequestBody(w, r, &body)
+	if err != nil {
+		fault.NewHTTPError(w, err)
+		return
+	}
+
+	err = body.Validate()
+	if err != nil {
+		fault.NewHTTPError(w, fault.NewValidation("failed to validate body", err))
+		return
+	}
+
+	err = h.service.AddProductCategory(r.Context(), body.ProductID, body.CategoryID)
+	if err != nil {
+		fault.NewHTTPError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h handler) updateProduct(w http.ResponseWriter, r *http.Request) {

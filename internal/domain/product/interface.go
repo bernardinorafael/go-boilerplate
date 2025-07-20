@@ -15,6 +15,7 @@ type Repository interface {
 	GetByName(ctx context.Context, name string) (*model.Product, error)
 	Update(ctx context.Context, product model.Product) error
 	Delete(ctx context.Context, productID string) error
+	InsertProductCategory(ctx context.Context, model model.ProductCategory) error
 }
 
 type Service interface {
@@ -23,4 +24,5 @@ type Service interface {
 	GetProducts(ctx context.Context, search dto.SearchParams) (*pagination.Paginated[dto.ProductResponse], error)
 	GetProductByID(ctx context.Context, productID string) (*dto.ProductResponse, error)
 	DeleteProduct(ctx context.Context, productID string) error
+	AddProductCategory(ctx context.Context, productID string, categoryID string) error
 }

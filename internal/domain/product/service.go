@@ -9,11 +9,13 @@ import (
 	"github.com/charmbracelet/log"
 
 	"github.com/bernardinorafael/go-boilerplate/internal/common/dto"
+	"github.com/bernardinorafael/go-boilerplate/internal/infra/database/model"
 	"github.com/bernardinorafael/go-boilerplate/pkg/cache"
 	"github.com/bernardinorafael/go-boilerplate/pkg/dbutil"
 	"github.com/bernardinorafael/go-boilerplate/pkg/fault"
 	"github.com/bernardinorafael/go-boilerplate/pkg/metric"
 	"github.com/bernardinorafael/go-boilerplate/pkg/pagination"
+	"github.com/bernardinorafael/go-boilerplate/pkg/uid"
 )
 
 type service struct {
@@ -35,6 +37,35 @@ func NewService(
 		metrics: metrics,
 		cache:   cache,
 	}
+}
+
+func (s service) AddProductCategory(ctx context.Context, productID string, categoryID string) error {
+	s.log.Debug(
+		"trying to create product category",
+		"product_id", productID,
+		"category_id", categoryID,
+	)
+
+	model := model.ProductCategory{
+		ID:         uid.New("pc"),
+		ProductID:  productID,
+		CategoryID: categoryID,
+		CreatedAt:  time.Now(),
+	}
+
+	err := s.repo.InsertProductCategory(ctx, model)
+	if err != nil {
+		s.log.Error("failed to add product category", "err", err)
+		return fault.NewBadRequest("failed to add product category")
+	}
+
+	s.log.Debug(
+		"product category created",
+		"product_id", productID,
+		"category_id", categoryID,
+	)
+
+	return nil
 }
 
 func (s service) GetProducts(ctx context.Context, search dto.SearchParams) (*pagination.Paginated[dto.ProductResponse], error) {

@@ -39,3 +39,10 @@ type Category struct {
 	UpdatedAt time.Time  `db:"updated_at"`
 	DeletedAt *time.Time `db:"deleted_at"`
 }
+
+type ProductCategory struct {
+	ID         string    `db:"id"`
+	ProductID  string    `db:"product_id"`
+	CategoryID string    `db:"category_id"`
+	CreatedAt  time.Time `db:"created_at"`
+}

@@ -1,7 +1,7 @@
-CREATE TABLE IF NOT EXISTS "users" (
-	"id" VARCHAR(255) PRIMARY KEY,
-	"email" VARCHAR(255) UNIQUE,
-	"name" VARCHAR(255),
-	"created" TIMESTAMPTZ DEFAULT now(),
-	"updated" TIMESTAMPTZ DEFAULT now()
+create table if not exists "users" (
+	"id" varchar(255) primary key,
+	"email" varchar(255) unique,
+	"name" varchar(255),
+	"created" timestamptz default now(),
+	"updated" timestamptz default now()
 );

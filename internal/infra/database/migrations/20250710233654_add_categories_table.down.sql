@@ -1,1 +1,1 @@
-DROP TABLE IF EXISTS "categories"
+drop table if exists "categories"

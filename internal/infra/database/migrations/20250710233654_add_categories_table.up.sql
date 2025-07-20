@@ -1,13 +1,13 @@
-CREATE TABLE IF NOT EXISTS "categories" (
-	"id" VARCHAR(255) PRIMARY KEY,
-	"name" VARCHAR(255) UNIQUE NOT NULL,
-	"slug" VARCHAR(255) NOT NULL,
-	"active" BOOLEAN NOT NULL,
-	"created_at" TIMESTAMPTZ DEFAULT now(),
-	"updated_at" TIMESTAMPTZ DEFAULT now(),
-	"deleted_at" TIMESTAMPTZ NULL
+create table if not exists "categories" (
+	"id" varchar(255) primary key,
+	"name" varchar(255) unique not null,
+	"slug" varchar(255) not null,
+	"active" boolean not null,
+	"created_at" timestamptz default now(),
+	"updated_at" timestamptz default now(),
+	"deleted_at" timestamptz null
 );
 
-CREATE INDEX IF NOT EXISTS "idx_categories_active" ON "categories" ("active");
-CREATE INDEX IF NOT EXISTS "idx_categories_slug" ON "categories" ("slug");
-CREATE INDEX IF NOT EXISTS "idx_categories_deleted_at" ON "categories" ("deleted_at");
+create index if not exists "idx_categories_active" on "categories" ("active");
+create index if not exists "idx_categories_slug" on "categories" ("slug");
+create index if not exists "idx_categories_deleted_at" on "categories" ("deleted_at");

@@ -1,18 +1,18 @@
-CREATE TABLE IF NOT EXISTS "codes" (
-	"id" VARCHAR(255) PRIMARY KEY,
-	"user_id" VARCHAR(255) NOT NULL,
-	"code" VARCHAR(34) UNIQUE NOT NULL,
-	"active" BOOLEAN NOT NULL,
-	"attempts" INTEGER NOT NULL,
-	"used_at" TIMESTAMPTZ,
-	"expires_at" TIMESTAMPTZ NOT NULL,
-	"created_at" TIMESTAMPTZ DEFAULT now(),
-	"updated_at" TIMESTAMPTZ DEFAULT now()
+create table if not exists "codes" (
+	"id" varchar(255) primary key,
+	"user_id" varchar(255) not null,
+	"code" varchar(34) unique not null,
+	"active" boolean not null,
+	"attempts" integer not null,
+	"used_at" timestamptz,
+	"expires_at" timestamptz not null,
+	"created_at" timestamptz default now(),
+	"updated_at" timestamptz default now()
 );
 
-ALTER TABLE "codes"
-	ADD CONSTRAINT "fk_userId_codes" FOREIGN KEY ("user_id") REFERENCES "users" ("id") ON DELETE CASCADE;
+alter table "codes"
+	add constraint "fk_userid_codes" foreign key ("user_id") references "users" ("id") on delete cascade;
 
-CREATE INDEX "idx_codes_userId" ON "codes" ("user_id");
-CREATE INDEX "idx_codes_code" ON "codes" ("code");
-CREATE INDEX "idx_codes_active" ON "codes" ("active");
+create index "idx_codes_userid" on "codes" ("user_id");
+create index "idx_codes_code" on "codes" ("code");
+create index "idx_codes_active" on "codes" ("active");

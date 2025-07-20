@@ -25,6 +25,32 @@ func NewRepo(db *sqlx.DB, timeout time.Duration) *repo {
 	}
 }
 
+func (r repo) InsertProductCategory(ctx context.Context, model model.ProductCategory) error {
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
+	defer cancel()
+
+	var query = `
+		insert into product_categories (
+			id,
+			product_id,
+			category_id,
+			created_at
+		) values (
+			:id,
+			:product_id,
+			:category_id,
+			:created_at
+		)
+	`
+
+	_, err := r.db.NamedExecContext(ctx, query, model)
+	if err != nil {
+		return fault.New("failed to batch insert product categories", fault.WithError(err))
+	}
+
+	return nil
+}
+
 func (r repo) Delete(ctx context.Context, productID string) error {
 	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
@@ -45,15 +71,15 @@ func (r repo) GetAll(ctx context.Context, search dto.SearchParams) ([]model.Prod
 	var skip = (search.Page - 1) * search.Limit
 
 	var query = fmt.Sprintf(
-		`SELECT p.*
-		FROM products p
-		WHERE (
+		`select p.*
+		from products p
+		where (
 			to_tsvector('simple', p.name)
 			@@ websearch_to_tsquery('simple', $1)
-			OR p.name ILIKE '%%' || $1 || '%%'
+			or p.name ilike '%%' || $1 || '%%'
 		)
-		ORDER BY p.created %s
-		LIMIT $2 OFFSET $3`,
+		order by p.created %s
+		limit $2 offset $3`,
 		search.Sort,
 	)
 
@@ -108,13 +134,13 @@ func (r repo) Insert(ctx context.Context, product model.Product) error {
 	defer cancel()
 
 	var query = `
-		INSERT INTO products (
+		insert into products (
 			id,
 			name,
 			price,
 			created,
 			updated
-		) VALUES (
+		) values (
 			:id,
 			:name,
 			:price,
@@ -136,12 +162,12 @@ func (r repo) Update(ctx context.Context, product model.Product) error {
 	defer cancel()
 
 	var query = `
-		UPDATE products
-		SET
+		update products
+		set
 			name = :name,
 			price = :price,
 			updated = :updated
-		WHERE id = :id
+		where id = :id
 	`
 
 	_, err := r.db.NamedExecContext(ctx, query, product)

@@ -28,15 +28,15 @@ func (r repo) Update(ctx context.Context, model model.Code) error {
 	defer cancel()
 
 	var query = `
-		UPDATE codes
-		SET
+		update codes
+		set
 			active = :active,
 			attempts = :attempts,
 			used_at = :used_at,
 			expires_at = :expires_at,
 			updated_at = :updated_at
-		WHERE id = :id
-		AND user_id = :user_id
+		where id = :id
+		and user_id = :user_id
 	`
 
 	_, err := r.db.NamedExecContext(ctx, query, model)
@@ -55,7 +55,7 @@ func (r repo) GetByUserID(ctx context.Context, userID string) (*model.Code, erro
 	err := r.db.GetContext(
 		ctx,
 		&code,
-		"SELECT * FROM codes WHERE user_id = $1 AND active = TRUE LIMIT 1",
+		"select * from codes where user_id = $1 and active = TRUE limit 1",
 		userID,
 	)
 	if err != nil {
@@ -74,7 +74,7 @@ func (r repo) InactivateAll(ctx context.Context, userID string) error {
 
 	_, err := r.db.ExecContext(
 		ctx,
-		"UPDATE codes SET active = FALSE WHERE user_id = $1 AND active = TRUE",
+		"update codes set active = FALSE where user_id = $1 and active = TRUE",
 		userID,
 	)
 	if err != nil {
@@ -89,7 +89,7 @@ func (r repo) Insert(ctx context.Context, model model.Code) error {
 	defer cancel()
 
 	var query = `
-		INSERT INTO codes (
+		insert into codes (
 			id,
 			user_id,
 			code,
@@ -99,7 +99,7 @@ func (r repo) Insert(ctx context.Context, model model.Code) error {
 			expires_at,
 			created_at,
 			updated_at
-		) VALUES (
+		) values (
 			:id,
 			:user_id,
 			:code,
